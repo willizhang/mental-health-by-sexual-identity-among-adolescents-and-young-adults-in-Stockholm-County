@@ -1,0 +1,326 @@
+---
+title: "Summary plots of complete-case analyses among 16-29 years"
+author: Willi Zhang
+email: willi.zhang@ki.se
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+### 1. Load Packages and Global Settings
+```{r}
+library(forestploter)
+library(grid)
+library(readxl)
+library(here)
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(ggplot2)
+library(colorspace)
+library(naniar)
+library(ggh4x)
+library(scales)
+library(lemon)
+library(stringr)
+
+# fixed year color mapping (2001-2021)
+all_years <- 2001:2021
+palette_full <- colorRampPalette( viridis::viridis( 16, option = "turbo" )[3:14] )( length( all_years ) )
+year_colors <- setNames( palette_full, all_years )
+```
+
+### 2. Individual Surveys
+#### 2.1. Prevalence
+##### 2.1.1. By sexual identity
+###### 2.1.1.1. Prepare data
+```{r}
+prevalence_2002_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_age_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_cat ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2006_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_age_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_cat ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2010_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_age_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_cat ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2014_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_age_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2014 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_cat ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2021_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_age_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2021 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_cat ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+# merge and clean data
+prevalence_indi_by_age_cc <- bind_rows( prevalence_2002_by_age_cc,
+                                        prevalence_2006_by_age_cc,
+                                        prevalence_2010_by_age_cc,
+                                        prevalence_2014_by_age_cc,
+                                        prevalence_2021_by_age_cc ) %>%
+  mutate( sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) ),
+          age_cat = recode( age_cat, "<=29" = "16–29" ),
+          age_cat = factor( age_cat, levels = c( "16–29", "30–44", "45–59" ) ),
+          outcome = as.factor( outcome ),
+          year = as.factor( year ) ) %>%
+  filter( sexual_identity != "Other",
+          age_cat == "16–29" )
+
+summary( prevalence_indi_by_age_cc )
+```
+
+###### 2.1.1.2. Self-reported
+```{r}
+prevalence_indi_by_age_cc %>%
+  filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
+  summary()
+
+prevalence_indi_by_age_cc %>%
+  filter( outcome %in% c( "suicide_attempts" ) ) %>%
+  summary()
+
+prevalence_indi_by_age_cc %>%
+  filter( outcome %in% c( "psychological_distress" ) ) %>%
+  summary()
+
+p_prevalence <- ggplot( 
+  prevalence_indi_by_age_cc %>%
+    filter( outcome %in% c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) ) %>%
+    mutate( outcome = factor( outcome, levels = c( "suicidal_thoughts", "suicide_attempts", "psychological_distress" ) ) ),
+  
+  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
+  
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = 0.1 ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.02 ) ) ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" ) ) +
+  
+  labs(
+    x = NULL,
+    y = "Prevalence (95% CI)",
+    color = NULL ) +
+  
+  facet_wrap( ~ outcome, 
+              ncol = 2,
+              axes = "all",
+              scales = "free_y",
+              labeller = labeller(
+                outcome = c(
+                  "psychological_distress" = "Psychological Distress",
+                  "suicidal_thoughts" = "Suicidal Thoughts",
+                  "suicide_attempts" = "Suicide Attempts" ) ) ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "psychological_distress" ~ scale_y_continuous( limits = c( 0, 0.7 ), 
+                                                              breaks = c( seq( 0, 0.7, 0.1 ) ),
+                                                              labels = scales::percent_format( accuracy = 1 ),
+                                                              expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+    outcome == "suicidal_thoughts" ~ scale_y_continuous( limits = c( 0, 0.7 ), 
+                                                         breaks = c( seq( 0, 0.7, 0.1 ) ),
+                                                         labels = scales::percent_format( accuracy = 1 ),
+                                                         expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+    outcome == "suicide_attempts" ~ scale_y_continuous( limits = c( 0, 0.4 ), 
+                                                        breaks = c( seq( 0, 0.4, 0.1 ) ),
+                                                        labels = scales::percent_format( accuracy = 1 ),
+                                                        expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_prevalence
+ggsave( "results-output-age-16-29/plots_cc/p_prevalence_self_report_cc.svg", plot = p_prevalence, width = 9, height = 8 )
+```
+
+##### 2.1.2. By sex
+###### 2.1.2.1. Prepare data
+```{r}
+prevalence_2002_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_age_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2006_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_age_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2010_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_age_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2014_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_age_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2014 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+prevalence_2021_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_age_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2021 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, age_sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+# merge and clean data
+prevalence_indi_by_age_sex_cc <- bind_rows( prevalence_2002_by_age_sex_cc,
+                                            prevalence_2006_by_age_sex_cc,
+                                            prevalence_2010_by_age_sex_cc,
+                                            prevalence_2014_by_age_sex_cc,
+                                            prevalence_2021_by_age_sex_cc ) %>%
+  separate( age_sex, 
+            into = c( "age_group", "sex" ),
+            sep = "\\." ) %>%
+  mutate( sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) ),
+          age_group = recode( age_group, "<=29" = "16–29" ),
+          age_group = factor( age_group, levels = c( "16–29", "30–44", "45–59" ) ),
+          sex = factor( sex, levels = c( "Female", "Male" ) ),
+          outcome = as.factor( outcome ),
+          year = as.factor( year ) ) %>%
+  filter( sexual_identity != "Other",
+          age_group == "16–29" )
+
+summary( prevalence_indi_by_age_sex_cc )
+```
+
+###### 2.1.2.2. Self-reported
+```{r}
+prevalence_indi_by_age_sex_cc %>%
+  filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
+  summary()
+
+prevalence_indi_by_age_sex_cc %>%
+  filter( outcome %in% c( "suicide_attempts" ) ) %>%
+  summary()
+
+prevalence_indi_by_age_sex_cc %>%
+  filter( outcome %in% c( "psychological_distress" ) ) %>%
+  summary()
+
+p_prevalence <- ggplot( 
+  prevalence_indi_by_age_sex_cc %>%
+    filter( outcome %in% c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) ) %>%
+    mutate( outcome = factor( outcome, levels = c( "suicidal_thoughts", "suicide_attempts", "psychological_distress" ) ),
+            sexual_identity_sex = interaction( sexual_identity, sex ) ),
+  
+  aes( x = year, y = point_estimate, color = sexual_identity_sex, group = sexual_identity_sex ) ) +
+  
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = 0.1 ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.02 ) ) ) +
+  
+  scale_color_manual( values = c(
+    "Heterosexual.Female" = "#F8766D",
+    "Heterosexual.Male" = lighten( "#F8766D", 0.4 ),
+    "Bisexual.Female" = "#C77CFF",
+    "Bisexual.Male" = lighten( "#C77CFF", 0.4 ),
+    "Homosexual.Female" = "#00BFC4",
+    "Homosexual.Male" = lighten( "#00BFC4", 0.4 ) ),
+    
+    labels = c(
+      "Heterosexual.Female"   = "Heterosexual (Female)",
+      "Heterosexual.Male"      = "Heterosexual (Male)",
+      "Bisexual.Female"   = "Bisexual (Female)",
+      "Bisexual.Male"      = "Bisexual (Male)",
+      "Homosexual.Female" = "Homosexual (Female)",
+      "Homosexual.Male"    = "Homosexual (Male)" ),
+    
+    guide = guide_legend( nrow = 3 ) ) +
+  
+  labs(
+    x = NULL,
+    y = "Prevalence (95% CI)",
+    color = NULL ) +
+  
+  facet_wrap( ~ outcome, 
+              ncol = 2,
+              axes = "all",
+              scales = "free_y",
+              labeller = labeller(
+                outcome = c(
+                  "psychological_distress" = "Psychological Distress",
+                  "suicidal_thoughts" = "Suicidal Thoughts",
+                  "suicide_attempts" = "Suicide Attempts" ) ) ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "psychological_distress" ~ scale_y_continuous( limits = c( 0, 1 ), 
+                                                              breaks = c( seq( 0, 1, 0.2 ) ),
+                                                              labels = scales::percent_format( accuracy = 1 ),
+                                                              expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+    outcome == "suicidal_thoughts" ~ scale_y_continuous( limits = c( 0, 0.9 ), 
+                                                         breaks = c( seq( 0, 0.9, 0.3 ) ),
+                                                         labels = scales::percent_format( accuracy = 1 ),
+                                                         expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+    outcome == "suicide_attempts" ~ scale_y_continuous( limits = c( 0, 0.5 ), 
+                                                        breaks = c( seq( 0, 0.5, 0.1 ) ),
+                                                        labels = scales::percent_format( accuracy = 1 ),
+                                                        expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_prevalence
+ggsave( "results-output-age-16-29/plots_cc/p_prevalence_self_report_by_sex_cc.svg", plot = p_prevalence, width = 9, height = 9 )
+```
+
+
