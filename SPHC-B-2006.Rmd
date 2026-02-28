@@ -523,7 +523,7 @@ overall_prevalence_2006 <- Reduce( cbind, overall_list ) %>%
   mutate( sexual_identity = "Stockholm County" ) %>%
   relocate( sexual_identity )
 
-writexl::write_xlsx( overall_prevalence_2006, "results_output/results_cc/overall_prevalence_2006.xlsx" )
+writexl::write_xlsx( overall_prevalence_2006, "results_output/results_cc/overall_prevalence_2006_cc.xlsx" )
 
 # by sexual identity
 results_list <- cal_prev_indi_cc( variables_list = variables_list, 
@@ -536,7 +536,7 @@ prevalence_2006 <- Reduce( function( x, y ){
 }, 
 results_list )
 
-writexl::write_xlsx( prevalence_2006, "results_output/results_cc/prevalence_2006_cc.xlsx" )
+writexl::write_xlsx( prevalence_2006, "results_output/results_cc/prevalence_2006_by_identity_cc.xlsx" )
 
 # by sex
 results_list_by_sex <- cal_prev_indi_cc( variables_list = variables_list,
@@ -583,14 +583,14 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
 
-# crude analysis
+# crude analysis (overall)
 models_list_crude <- cal_pr_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
   outcome_list = variables_list,
   year = 2006 )
 
-# adjusted analysis
+# adjusted analysis (overall)
 models_list_adjusted <- cal_pr_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
@@ -611,6 +611,88 @@ pr_adjusted_cc <- extract_pr_cc(
 pr_2006_cc <- bind_rows( pr_crude_cc, pr_adjusted_cc )
 writexl::write_xlsx( pr_2006_cc, "results_output/results_cc/pr_2006_cc.xlsx" )
 
+# crude analysis (MALE)
+levels( d_2006_complete$sex )
+
+models_list_male_crude <- cal_pr_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  year = 2006 )
+
+# adjusted analysis (MALE)
+models_list_male_adjusted <- cal_pr_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  covariates = "age + country_of_birth",
+  year = 2006 )
+
+summary( models_list_male_crude[[ 1 ]] ) # random check
+summary( models_list_male_adjusted[[ 1 ]] ) # random check
+
+pr_male_crude_cc <- extract_pr_by_sex_cc(
+  model_list = models_list_male_crude,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "crude",
+          sex = "Male" )
+
+pr_male_adjusted_cc <- extract_pr_by_sex_cc(
+  model_list = models_list_male_adjusted,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "adjusted",
+          sex = "Male" )
+
+pr_male_2006_cc <- bind_rows( pr_male_crude_cc, pr_male_adjusted_cc )
+writexl::write_xlsx( pr_male_2006_cc, "results_output/results_cc/pr_male_2006_cc.xlsx" )
+
+
+# create survey design
+survey_design_cc <- svydesign( ids = ~ 1, 
+                               strata = ~ sampling_strata_region,
+                               weights = ~ design_weight,
+                               fpc = ~ no.of.population,
+                               data = d_2006_complete %>%
+                                 mutate( used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
+                                         used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
+                                         suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
+                                         suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ),
+                                         sex = factor( sex, levels = c( "Female", "Male" ) ) ) )
+
+# crude analysis (FEMALE)
+models_list_female_crude <- cal_pr_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  year = 2006 )
+
+# adjusted analysis (FEMALE)
+models_list_female_adjusted <- cal_pr_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  covariates = "age + country_of_birth",
+  year = 2006 )
+
+summary( models_list_female_crude[[ 1 ]] ) # random check
+summary( models_list_female_adjusted[[ 1 ]] )
+
+pr_female_crude_cc <- extract_pr_by_sex_cc(
+  model_list = models_list_female_crude,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "crude",
+          sex = "Female" )
+
+pr_female_adjusted_cc <- extract_pr_by_sex_cc(
+  model_list = models_list_female_adjusted,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "adjusted",
+          sex = "Female" )
+
+pr_female_2006_cc <- bind_rows( pr_female_crude_cc, pr_female_adjusted_cc )
+writexl::write_xlsx( pr_female_2006_cc, "results_output/results_cc/pr_female_2006_cc.xlsx" )
+
 
 ########## Prevalence Difference ##########
 
@@ -628,14 +710,14 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
 
-# crude analysis
+# crude analysis (overall)
 models_list_crude <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
   outcome_list = variables_list,
   year = 2006 )
 
-# adjusted analysis
+# adjusted analysis (overall)
 models_list_adjusted <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
@@ -655,4 +737,86 @@ pd_adjusted_cc <- extract_pd_cc(
 
 pd_2006_cc <- bind_rows( pd_crude_cc, pd_adjusted_cc )
 writexl::write_xlsx( pd_2006_cc, "results_output/results_cc/pd_2006_cc.xlsx" )
+
+# crude analysis (MALE)
+levels( d_2006_complete$sex )
+
+models_list_male_crude <- cal_pd_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  year = 2006 )
+
+# adjusted analysis (MALE)
+models_list_male_adjusted <- cal_pd_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  covariates = "age + country_of_birth",
+  year = 2006 )
+
+summary( models_list_male_crude[[ 1 ]] ) # random check
+summary( models_list_male_adjusted[[ 1 ]] ) # random check
+
+pd_male_crude_cc <- extract_pd_by_sex_cc(
+  model_list = models_list_male_crude,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "crude",
+          sex = "Male" )
+
+pd_male_adjusted_cc <- extract_pd_by_sex_cc(
+  model_list = models_list_male_adjusted,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "adjusted",
+          sex = "Male" )
+
+pd_male_2006_cc <- bind_rows( pd_male_crude_cc, pd_male_adjusted_cc )
+writexl::write_xlsx( pd_male_2006_cc, "results_output/results_cc/pd_male_2006_cc.xlsx" )
+
+
+# create survey design
+survey_design_cc <- svydesign( ids = ~ 1, 
+                               strata = ~ sampling_strata_region,
+                               weights = ~ design_weight,
+                               fpc = ~ no.of.population,
+                               data = d_2006_complete %>%
+                                 mutate( used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
+                                         used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
+                                         suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
+                                         suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ),
+                                         sex = factor( sex, levels = c( "Female", "Male" ) ) ) )
+
+# crude analysis (FEMALE)
+models_list_female_crude <- cal_pd_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  year = 2006 )
+
+# adjusted analysis (FEMALE)
+models_list_female_adjusted <- cal_pd_indi_cc( 
+  design = subset( survey_design_cc, age <= 29 ), 
+  exposure = "sexual_identity_2010 * sex", 
+  outcome_list = variables_list,
+  covariates = "age + country_of_birth",
+  year = 2006 )
+
+summary( models_list_female_crude[[ 1 ]] ) # random check
+summary( models_list_female_adjusted[[ 1 ]] )
+
+pd_female_crude_cc <- extract_pd_by_sex_cc(
+  model_list = models_list_female_crude,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "crude",
+          sex = "Female" )
+
+pd_female_adjusted_cc <- extract_pd_by_sex_cc(
+  model_list = models_list_female_adjusted,
+  exposure_var = "sexual_identity_2010" ) %>%
+  mutate( model_type = "adjusted",
+          sex = "Female" )
+
+pd_female_2006_cc <- bind_rows( pd_female_crude_cc, pd_female_adjusted_cc )
+writexl::write_xlsx( pd_female_2006_cc, "results_output/results_cc/pd_female_2006_cc.xlsx" )
 ```

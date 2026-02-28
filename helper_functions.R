@@ -346,3 +346,36 @@ extract_pd_cc <- function( model_list, exposure_var ) {
   
   bind_rows( results )
 }
+
+# extract prevalence difference by sex
+extract_pd_by_sex_cc <- function( model_list, exposure_var ) {
+  
+  results <- lapply( names( model_list ), function( name ) {
+    
+    mod <- model_list[[ name ]]
+    
+    outcome <- sub( "_[0-9]{4}$", "", name )
+    year <- as.numeric( sub( ".*_", "", name ) )
+    
+    coef_est <- coef( mod )
+    ci_est <- confint( mod, ddf = degf( mod$survey.design ) )
+    
+    exposure_terms <- grep( paste0( "^", exposure_var ),
+                            names( coef_est ),
+                            value = TRUE )
+    
+    exposure_terms <- exposure_terms[ !grepl( ":", exposure_terms ) ]
+    
+    data.frame(
+      outcome = outcome,
+      year = year,
+      exposure_level = sub( paste0( exposure_var ), "", exposure_terms ),
+      estimate = coef_est[ exposure_terms ],
+      lower_ci = ci_est[ exposure_terms, 1 ],
+      upper_ci = ci_est[ exposure_terms, 2 ],
+      row.names = NULL
+    )
+  } )
+  
+  bind_rows( results )
+}

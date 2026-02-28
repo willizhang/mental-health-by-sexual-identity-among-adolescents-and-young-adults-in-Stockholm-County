@@ -35,74 +35,109 @@ year_colors <- setNames( palette_full, all_years )
 ##### 2.1.1. By sexual identity
 ###### 2.1.1.1. Prepare data
 ```{r}
-prevalence_2002_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_age_cc.xlsx" ) ) %>%
+# by sexual identity
+prevalence_2002_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_cat ),
+    cols = - c( sexual_identity ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2006_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_age_cc.xlsx" ) ) %>%
+prevalence_2006_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_cat ),
+    cols = -c( sexual_identity ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2010_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_age_cc.xlsx" ) ) %>%
+prevalence_2010_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_cat ),
+    cols = -c( sexual_identity ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2014_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_age_cc.xlsx" ) ) %>%
+prevalence_2014_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2014 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_cat ),
+    cols = -c( sexual_identity ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2021_by_age_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_age_cc.xlsx" ) ) %>%
+prevalence_2021_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2021 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_cat ),
+    cols = -c( sexual_identity ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+# overall prevalence
+overall_prevalence_2002_cc <- read_xlsx( here( "results_output/results_cc/overall_prevalence_2002_cc.xlsx" ) ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+overall_prevalence_2006_cc <- read_xlsx( here( "results_output/results_cc/overall_prevalence_2006_cc.xlsx" ) ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+overall_prevalence_2010_cc <- read_xlsx( here( "results_output/results_cc/overall_prevalence_2010_cc.xlsx" ) ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+overall_prevalence_2014_cc <- read_xlsx( here( "results_output/results_cc/overall_prevalence_2014_cc.xlsx" ) ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
+
+overall_prevalence_2021_cc <- read_xlsx( here( "results_output/results_cc/overall_prevalence_2021_cc.xlsx" ) ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
 # merge and clean data
-prevalence_indi_by_age_cc <- bind_rows( prevalence_2002_by_age_cc,
-                                        prevalence_2006_by_age_cc,
-                                        prevalence_2010_by_age_cc,
-                                        prevalence_2014_by_age_cc,
-                                        prevalence_2021_by_age_cc ) %>%
-  mutate( sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) ),
-          age_cat = recode( age_cat, "<=29" = "16–29" ),
-          age_cat = factor( age_cat, levels = c( "16–29", "30–44", "45–59" ) ),
+prevalence_indi_cc <- bind_rows( prevalence_2002_by_identity_cc,
+                                 prevalence_2006_by_identity_cc,
+                                 prevalence_2010_by_identity_cc,
+                                 prevalence_2014_by_identity_cc,
+                                 prevalence_2021_by_identity_cc,
+                                 overall_prevalence_2002_cc,
+                                 overall_prevalence_2006_cc,
+                                 overall_prevalence_2010_cc,
+                                 overall_prevalence_2014_cc,
+                                 overall_prevalence_2021_cc
+                                 ) %>%
+  mutate( sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other", "Stockholm County" ) ),
           outcome = as.factor( outcome ),
           year = as.factor( year ) ) %>%
-  filter( sexual_identity != "Other",
-          age_cat == "16–29" )
+  filter( sexual_identity != "Other" )
 
-summary( prevalence_indi_by_age_cc )
+summary( prevalence_indi_cc )
 ```
 
 ###### 2.1.1.2. Self-reported
 ```{r}
-prevalence_indi_by_age_cc %>%
+prevalence_indi_cc %>%
   filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
   summary()
 
-prevalence_indi_by_age_cc %>%
+prevalence_indi_cc %>%
   filter( outcome %in% c( "suicide_attempts" ) ) %>%
   summary()
 
-prevalence_indi_by_age_cc %>%
+prevalence_indi_cc %>%
   filter( outcome %in% c( "psychological_distress" ) ) %>%
   summary()
 
 p_prevalence <- ggplot( 
-  prevalence_indi_by_age_cc %>%
+  prevalence_indi_cc %>%
     filter( outcome %in% c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) ) %>%
     mutate( outcome = factor( outcome, levels = c( "suicidal_thoughts", "suicide_attempts", "psychological_distress" ) ) ),
   
@@ -119,7 +154,8 @@ p_prevalence <- ggplot(
     values = c(
       "Heterosexual" = "#F8766D",
       "Homosexual"   = "#00BFC4",
-      "Bisexual"     = "#C77CFF" ) ) +
+      "Bisexual"     = "#C77CFF",
+      "Stockholm County" = "brown" ) ) +
   
   labs(
     x = NULL,
@@ -166,84 +202,78 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results-output-age-16-29/plots_cc/p_prevalence_self_report_cc.svg", plot = p_prevalence, width = 9, height = 8 )
+ggsave( "results_output/plots_cc/p_prevalence_self_report_cc.svg", plot = p_prevalence, width = 9, height = 8 )
 ```
 
 ##### 2.1.2. By sex
 ###### 2.1.2.1. Prepare data
 ```{r}
-prevalence_2002_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_age_sex_cc.xlsx" ) ) %>%
+prevalence_2002_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_sex_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_sex ),
+    cols = -c( sexual_identity, sex ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2006_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_age_sex_cc.xlsx" ) ) %>%
+prevalence_2006_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_sex_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_sex ),
+    cols = -c( sexual_identity, sex ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2010_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_age_sex_cc.xlsx" ) ) %>%
+prevalence_2010_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2010_by_sex_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_sex ),
+    cols = -c( sexual_identity, sex ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2014_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_age_sex_cc.xlsx" ) ) %>%
+prevalence_2014_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2014_by_sex_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2014 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_sex ),
+    cols = -c( sexual_identity, sex ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
-prevalence_2021_by_age_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_age_sex_cc.xlsx" ) ) %>%
+prevalence_2021_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2021_by_sex_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2021 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity, age_sex ),
+    cols = -c( sexual_identity, sex ),
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" )
 
 # merge and clean data
-prevalence_indi_by_age_sex_cc <- bind_rows( prevalence_2002_by_age_sex_cc,
-                                            prevalence_2006_by_age_sex_cc,
-                                            prevalence_2010_by_age_sex_cc,
-                                            prevalence_2014_by_age_sex_cc,
-                                            prevalence_2021_by_age_sex_cc ) %>%
-  separate( age_sex, 
-            into = c( "age_group", "sex" ),
-            sep = "\\." ) %>%
+prevalence_indi_by_sex_cc <- bind_rows( prevalence_2002_by_sex_cc,
+                                        prevalence_2006_by_sex_cc,
+                                        prevalence_2010_by_sex_cc,
+                                        prevalence_2014_by_sex_cc,
+                                        prevalence_2021_by_sex_cc ) %>%
   mutate( sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) ),
-          age_group = recode( age_group, "<=29" = "16–29" ),
-          age_group = factor( age_group, levels = c( "16–29", "30–44", "45–59" ) ),
           sex = factor( sex, levels = c( "Female", "Male" ) ),
           outcome = as.factor( outcome ),
           year = as.factor( year ) ) %>%
-  filter( sexual_identity != "Other",
-          age_group == "16–29" )
+  filter( sexual_identity != "Other" )
 
-summary( prevalence_indi_by_age_sex_cc )
+summary( prevalence_indi_by_sex_cc )
 ```
 
 ###### 2.1.2.2. Self-reported
 ```{r}
-prevalence_indi_by_age_sex_cc %>%
+prevalence_indi_by_sex_cc %>%
   filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
   summary()
 
-prevalence_indi_by_age_sex_cc %>%
+prevalence_indi_by_sex_cc %>%
   filter( outcome %in% c( "suicide_attempts" ) ) %>%
   summary()
 
-prevalence_indi_by_age_sex_cc %>%
+prevalence_indi_by_sex_cc %>%
   filter( outcome %in% c( "psychological_distress" ) ) %>%
   summary()
 
 p_prevalence <- ggplot( 
-  prevalence_indi_by_age_sex_cc %>%
+  prevalence_indi_by_sex_cc %>%
     filter( outcome %in% c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) ) %>%
     mutate( outcome = factor( outcome, levels = c( "suicidal_thoughts", "suicide_attempts", "psychological_distress" ) ),
             sexual_identity_sex = interaction( sexual_identity, sex ) ),
@@ -320,7 +350,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results-output-age-16-29/plots_cc/p_prevalence_self_report_by_sex_cc.svg", plot = p_prevalence, width = 9, height = 9 )
+ggsave( "results_output/plots_cc/p_prevalence_self_report_by_sex_cc.svg", plot = p_prevalence, width = 9, height = 9 )
 ```
 
 
