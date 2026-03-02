@@ -535,6 +535,21 @@ overall_prevalence_2021 <- Reduce( cbind, overall_list ) %>%
 
 writexl::write_xlsx( overall_prevalence_2021, "results_output/results_cc/overall_prevalence_2021_cc.xlsx" )
 
+# overall prevalence by sex
+results_list <- cal_prev_indi_cc( variables_list = variables_list, 
+                                  design = subset( survey_design_cc, age <= 29 ), 
+                                  year = 2021, 
+                                  group_var = "sex" )
+
+overall_prevalence_2021_by_sex <- Reduce( function( x, y ){
+  merge( x, y, by = "sex" )
+}, 
+results_list ) %>%
+  mutate( sexual_identity = "Stockholm County" ) %>%
+  relocate( sexual_identity )
+
+writexl::write_xlsx( overall_prevalence_2021_by_sex, "results_output/results_cc/overall_prevalence_2021_by_sex_cc.xlsx" )
+
 # by sexual identity
 results_list <- cal_prev_indi_cc( variables_list = variables_list, 
                                   design = subset( survey_design_cc, age <= 29 ), 
