@@ -190,7 +190,7 @@ table( d_2014$marital_status, useNA = "always" )
 ##### demographic characteristics #####
 
 # make characteristics table by sexual identity
-explanatory =  c( "sex", "age_cat", "country_of_birth", "education", "income", "marital_status" )
+explanatory =  c( "age", "sex", "country_of_birth", "education", "income", "marital_status" )
 dependent = "sexual_identity_2014"
 
 d_2014_table <- d_2014 %>% 
