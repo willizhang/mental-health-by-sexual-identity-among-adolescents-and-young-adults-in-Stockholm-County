@@ -1,0 +1,2022 @@
+---
+title: "Sexual identity and mental health outcomes among adolescents and young adults in Stockholm County, pooled cohort"
+author: Willi Zhang
+email: willi.zhang@ki.se
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+### 1. Load Packages
+```{r}
+library(haven)
+library(tidyverse)
+library(finalfit)
+library(lubridate)
+library(ggalluvial)
+library(ggrepel)
+library(ggbreak)
+library(lemon)
+library(scales)
+library(naniar)
+library(survey)
+library(jomo)
+library(mitml)
+library(mitools)
+library(UpSetR)
+library(here)
+source('helper_functions.R') # helper function
+```
+
+### 2. The Stockholm Public Health Cohort, 2002-2021
+#### 2.1. Prepare datasets
+```{r}
+variable_list <- c( "lopnr", "sexual_identity_2010", "sexual_identity_2014", "sexual_identity_2021", "birth_year", "sex", "country_of_birth" )
+
+### SPHC-B 2002 ### 
+
+d_2002 <- read_sas("/Volumes/projects/LGBT Project data/sphc02_07_10_14_21.sas7bdat")
+
+summary( d_2002$lopnr ) # 7,411 missing
+
+# sexual identity in 2010
+table( d_2002$F10F103, useNA = "always" )
+d_2002$F10F103[ d_2002$F10F103 == 9 ] <- NA
+d_2002$sexual_identity_2010 <- factor( ifelse( d_2002$F10F103 == 1, "Heterosexual",
+                                                  ifelse( d_2002$F10F103 == 2, "Homosexual",
+                                                          ifelse( d_2002$F10F103 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2002$sexual_identity_2010, useNA = "always" )
+
+# sexual identity in 2014
+table( d_2002$F14F103, useNA = "always" )
+d_2002$sexual_identity_2014 <- factor( ifelse( d_2002$F14F103 == 1, "Heterosexual",
+                                                  ifelse( d_2002$F14F103 == 2, "Homosexual",
+                                                          ifelse( d_2002$F14F103 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2002$sexual_identity_2014, useNA = "always" )
+
+# sexual identity in 2021
+table( d_2002$F21F91, useNA = "always" )
+d_2002$sexual_identity_2021 <- factor( ifelse( d_2002$F21F91 == 1, "Heterosexual",
+                                                  ifelse( d_2002$F21F91 == 2, "Homosexual",
+                                                          ifelse( d_2002$F21F91 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2002$sexual_identity_2021, useNA = "always" )
+
+# birth year
+summary( d_2002$F2alder )
+d_2002$birth_year <- 2002 - d_2002$F2alder
+summary( d_2002$birth_year )
+
+# sex
+table( d_2002$kon, useNA = "always" )
+d_2002$sex <- factor( ifelse( d_2002$kon == 1, "Male", "Female" ),
+                      levels = c( "Male", "Female" ) )
+table( d_2002$sex, useNA = "always" )
+
+# country of birth
+table( d_2002$fodelseland, useNA = "always" )
+d_2002$fodelseland[ d_2002$fodelseland == "" ] <- NA
+d_2002$country_of_birth <- factor( ifelse( d_2002$fodelseland == "Sverige", "Sweden",
+                                           ifelse( d_2002$fodelseland == "Europa", "Europe", "Outside Europe" ) ),
+                                   levels = c( "Sweden", "Europe", "Outside Europe" ) )
+table( d_2002$country_of_birth, useNA = "always" )
+
+d_2002 <- d_2002 %>% 
+  filter( !is.na( lopnr) ) # 7,411 in SPHC-B 2002 did not participate in follow-up surveys and therefore excluded
+
+summary( d_2002 %>% select( all_of( variable_list ) ) )
+
+
+### SPHC-B 2006 ###
+
+d_2006 <- read_sas("/Volumes/projects/LGBT Project data/sphc06_10_14_21.sas7bdat")
+
+summary( d_2006$lopnr )
+
+# sexual identity in 2010
+table( d_2006$F10F103, useNA = "always" )
+d_2006$F10F103[ d_2006$F10F103 == 9 ] <- NA
+d_2006$sexual_identity_2010 <- factor( ifelse( d_2006$F10F103 == 1, "Heterosexual",
+                                                  ifelse( d_2006$F10F103 == 2, "Homosexual",
+                                                          ifelse( d_2006$F10F103 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2006$sexual_identity_2010, useNA = "always" )
+
+# sexual identity in 2014
+table( d_2006$F14F103, useNA = "always" )
+d_2006$sexual_identity_2014 <- factor( ifelse( d_2006$F14F103 == 1, "Heterosexual",
+                                                  ifelse( d_2006$F14F103 == 2, "Homosexual",
+                                                          ifelse( d_2006$F14F103 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2006$sexual_identity_2014, useNA = "always" )
+
+# sexual identity in 2021
+table( d_2006$F21F91, useNA = "always" )
+d_2006$sexual_identity_2021 <- factor( ifelse( d_2006$F21F91 == 1, "Heterosexual",
+                                                  ifelse( d_2006$F21F91 == 2, "Homosexual",
+                                                          ifelse( d_2006$F21F91 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2006$sexual_identity_2021, useNA = "always" )
+
+# birth year
+summary( d_2006$F6alder )
+d_2006$birth_year <- 2006 - d_2006$F6alder
+summary( d_2006$birth_year )
+
+# sex
+table( d_2006$kon, useNA = "always" )
+d_2006$sex <- factor( ifelse( d_2006$kon == 1, "Male", "Female" ),
+                      levels = c( "Male", "Female" ) )
+table( d_2006$sex, useNA = "always" )
+
+# country of birth
+table( d_2006$fodelseland, useNA = "always" )
+d_2006$country_of_birth <- factor( ifelse( d_2006$fodelseland == "Sverige", "Sweden",
+                                           ifelse( d_2006$fodelseland == "Europa", "Europe", "Outside Europe" ) ),
+                                   levels = c( "Sweden", "Europe", "Outside Europe" ) )
+table( d_2006$country_of_birth, useNA = "always" )
+
+summary( d_2006 %>% select( all_of( variable_list ) ) )
+
+
+### SPHC-B 2010 ###
+
+d_2010 <- read_sas('/Volumes/projects/LGBT Project data/sphc10_14_21_updated.sas7bdat')
+
+summary( d_2010$lopnr )
+
+# sexual identity in 2010
+table( d_2010$F10U87G78, useNA = "always" )
+d_2010$F10U87G78[ d_2010$F10U87G78 == 9 ] <- NA
+d_2010$sexual_identity_2010 <- factor( ifelse( d_2010$F10U87G78 == 1, "Heterosexual",
+                                                  ifelse( d_2010$F10U87G78 == 2, "Homosexual",
+                                                          ifelse( d_2010$F10U87G78 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2010$sexual_identity_2010, useNA = "always" )
+
+# sexual identity in 2014
+table( d_2010$F14F103, useNA = "always" )
+d_2010$sexual_identity_2014 <- factor( ifelse( d_2010$F14F103 == 1, "Heterosexual",
+                                                  ifelse( d_2010$F14F103 == 2, "Homosexual",
+                                                          ifelse( d_2010$F14F103 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2010$sexual_identity_2014, useNA = "always" )
+
+# sexual identity in 2021
+table( d_2010$F21F91, useNA = "always" )
+d_2010$sexual_identity_2021 <- factor( ifelse( d_2010$F21F91 == 1, "Heterosexual",
+                                                  ifelse( d_2010$F21F91 == 2, "Homosexual",
+                                                          ifelse( d_2010$F21F91 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2010$sexual_identity_2021, useNA = "always" )
+
+# birth year
+summary( d_2010$F10alder )
+d_2010$birth_year <- 2010 - d_2010$F10alder
+summary( d_2010$birth_year )
+
+# sex
+table( d_2010$kon, useNA = "always" )
+d_2010$sex <- factor( ifelse( d_2010$kon == 1, "Male", "Female" ),
+                      levels = c( "Male", "Female" ) )
+table( d_2010$sex, useNA = "always" )
+
+# country of birth
+table( d_2010$fodelseland, useNA = "always" )
+d_2010$country_of_birth <- factor( ifelse( d_2010$fodelseland == "Sverige", "Sweden",
+                                           ifelse( d_2010$fodelseland == "Europa", "Europe", "Outside Europe" ) ),
+                                   levels = c( "Sweden", "Europe", "Outside Europe" ) )
+table( d_2010$country_of_birth, useNA = "always" )
+
+summary( d_2010 %>% select( all_of( variable_list ) ) )
+
+
+### SPHC-B 2014 ###
+
+load("/Volumes/projects/LGBT Project data/d_2014.RData")
+
+summary( d_2014$lopnr )
+
+# sexual identity in 2014
+table( d_2014$F14U90G82, useNA = "always" )
+d_2014$sexual_identity_2014 <- factor( ifelse( d_2014$F14U90G82 == 1, "Heterosexual",
+                                                  ifelse( d_2014$F14U90G82 == 2, "Homosexual",
+                                                          ifelse( d_2014$F14U90G82 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2014$sexual_identity_2014, useNA = "always" )
+
+# sexual identity in 2021
+table( d_2014$F21F91, useNA = "always" )
+d_2014$sexual_identity_2021 <- factor( ifelse( d_2014$F21F91 == 1, "Heterosexual",
+                                                  ifelse( d_2014$F21F91 == 2, "Homosexual",
+                                                          ifelse( d_2014$F21F91 == 3, "Bisexual", "Other" ) ) ),
+                                          levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2014$sexual_identity_2021, useNA = "always" )
+
+# birth year
+summary( d_2014$F14alder )
+d_2014$birth_year <- 2014 - d_2014$F14alder
+summary( d_2014$birth_year )
+
+# sex
+table( d_2014$kon, useNA = "always" )
+d_2014$sex <- factor( ifelse( d_2014$kon == 1, "Male", "Female" ),
+                      levels = c( "Male", "Female" ) )
+table( d_2014$sex, useNA = "always" )
+
+# country of birth
+table( d_2014$fodelseland, useNA = "always" )
+d_2014$country_of_birth <- factor( ifelse( d_2014$fodelseland == "Sverige", "Sweden",
+                                           ifelse( d_2014$fodelseland == "Europa", "Europe", "Outside Europe" ) ),
+                                   levels = c( "Sweden", "Europe", "Outside Europe" ) )
+table( d_2014$country_of_birth, useNA = "always" )
+
+summary( d_2014 %>% select( any_of( variable_list ) ) )
+
+
+### SPHC-B 2021 ###
+
+load("/Volumes/projects/LGBT Project data/d_2021.RData")
+
+d_2021 <- d_2021 %>%
+  rename( lopnr = lopnr2 ) %>%
+  mutate( lopnr = lopnr + 600000 )
+summary( d_2021$lopnr )
+
+# sexual identity in 2021
+table( d_2021$F21F45_Q57, useNA = "always" )
+d_2021$sexual_identity_2021 <- factor( ifelse( d_2021$F21F45_Q57 == 1, "Heterosexual", 
+                                          ifelse( d_2021$F21F45_Q57 == 2, "Homosexual",
+                                                  ifelse( d_2021$F21F45_Q57 == 3, "Bisexual", "Other" ) ) ),
+                                  levels = c( "Heterosexual", "Homosexual", "Bisexual", "Other" ) )
+table( d_2021$sexual_identity_2021, useNA = "always" )
+
+# birth year
+summary( d_2021$F21alder )
+d_2021$birth_year <- 2021 - d_2021$F21alder
+summary( d_2021$birth_year )
+
+# sex
+table( d_2021$kon, useNA = "always" )
+d_2021$sex <- factor( ifelse( d_2021$kon == 1, "Male", "Female" ), 
+                      levels = c( "Male", "Female" ) )
+table( d_2021$sex, useNA = "always" )
+
+# country of birth
+table( d_2021$fodelseland, useNA = "always" )
+d_2021$country_of_birth <- factor( ifelse( d_2021$fodelseland == "Sverige", "Sweden",
+                                           ifelse( d_2021$fodelseland == "Europa", "Europe", "Outside Europe" ) ),
+                                   levels = c( "Sweden", "Europe", "Outside Europe" ) )
+table( d_2021$country_of_birth, useNA = "always" )
+
+summary( d_2021 %>% select( any_of( variable_list ) ) )
+
+
+### CLEAN DATA ###
+
+# SPHC 2002 to 2014
+d_2002_selected <- d_2002 %>%
+  select( any_of( variable_list ) ) %>%
+  mutate( survey_year = "SPHC 2002" )
+
+d_2006_selected <- d_2006 %>%
+  select( any_of( variable_list ) ) %>%
+  mutate( survey_year = "SPHC 2006" )
+
+d_2010_selected <- d_2010 %>%
+  select( any_of( variable_list ) ) %>%
+  mutate( survey_year = "SPHC 2010" )
+
+d_2014_selected <- d_2014 %>%
+  select( any_of( variable_list ) ) %>%
+  mutate( survey_year = "SPHC 2014" )
+
+pre2021 <- bind_rows(
+  d_2002_selected,
+  d_2006_selected,
+  d_2010_selected,
+  d_2014_selected ) %>%
+  mutate( survey_year = as.factor( survey_year ) )
+
+summary( pre2021 )
+
+# check for overlapping participants across SPHC-B 2002 to 2014
+# unable to check for SPHC-B 2021, because of its independent lopnr number system
+length( intersect( d_2002_selected$lopnr, d_2006_selected$lopnr ) ) # 999 individuals participated in both SPHC-B 2002 and 2006
+length( intersect( d_2002_selected$lopnr, d_2010_selected$lopnr ) ) # 0
+length( intersect( d_2002_selected$lopnr, d_2014_selected$lopnr ) ) # 62
+length( intersect( d_2006_selected$lopnr, d_2010_selected$lopnr ) ) # 0
+length( intersect( d_2006_selected$lopnr, d_2014_selected$lopnr ) ) # 83
+length( intersect( d_2010_selected$lopnr, d_2014_selected$lopnr ) ) # 0
+length( Reduce( intersect, list( d_2002_selected$lopnr, d_2006_selected$lopnr, d_2014_selected$lopnr ) ) ) # two individuals participated in SPHC-B 2002, 2006, and 2014
+
+sum( duplicated( pre2021$lopnr ) ) # 1,142 duplicates in total
+id_with_overlap <- pre2021 %>% count( lopnr ) %>% filter( n > 1 ) %>% pull( lopnr )
+levels( pre2021$survey_year )
+
+# pre2021 %>%
+#   group_by( lopnr ) %>%
+#   filter( n() > 1 ) %>%
+#   mutate( row_count = n() ) %>%
+#   ungroup() %>%
+#   arrange( desc( row_count ), lopnr ) %>%
+#   View()
+
+non_matching_lopnr <- pre2021 %>%
+  select( -survey_year ) %>%
+  group_by( lopnr ) %>%
+  filter( n() > 1 ) %>%
+  filter( n_distinct( across( everything() ) ) > 1 ) %>%
+  ungroup() %>%
+  distinct( lopnr ) %>%
+  pull()
+
+pre2021_diff <- pre2021 %>%
+  filter( lopnr %in% non_matching_lopnr ) %>%
+  group_by( lopnr ) %>%
+  mutate( row_count = n() ) %>%
+  ungroup() %>%
+  arrange( desc( row_count ), lopnr, survey_year )
+
+# View( pre2021_diff )
+
+pre2021_selected <- pre2021 %>%
+  arrange( lopnr, survey_year ) %>%
+  group_by( lopnr ) %>%
+  slice_tail( n = 1 ) %>% # remove duplicates and retain data for the latest year
+  ungroup()
+
+sum( duplicated( pre2021_selected$lopnr ) ) # 0
+nrow( pre2021_selected ) # 110,353
+summary( pre2021_selected )
+
+# define variables
+pre2021_selected <- pre2021_selected %>%
+  mutate(
+    
+    # sexual identity
+    sexual_identity_baseline = case_when(
+      survey_year %in% c( "SPHC 2002", "SPHC 2006", "SPHC 2010" ) ~ sexual_identity_2010,
+      survey_year == "SPHC 2014" ~ sexual_identity_2014 ),
+    
+    # generation
+    generation = factor(
+      case_when(
+        birth_year >= 1997 & birth_year <= 2012 ~ "Generation Z (1997–2012)",
+        birth_year >= 1981 & birth_year <= 1996 ~ "Millennials (1981–1996)",
+        birth_year >= 1965 & birth_year <= 1980 ~ "Generation X (1965–1980)",
+        birth_year >= 1946 & birth_year <= 1964 ~ "Baby Boomers (1946–1964)",
+        birth_year >= 1928 & birth_year <= 1945 ~ "Silent Generation (1928–1945)",
+        birth_year >= 1901 & birth_year <= 1927 ~ "Greatest Generation (1901–1927)" ),
+      levels = c( "Generation Z (1997–2012)", "Millennials (1981–1996)", "Generation X (1965–1980)", "Baby Boomers (1946–1964)", "Silent Generation (1928–1945)", "Greatest Generation (1901–1927)" ) ) 
+    )
+
+table( pre2021_selected$survey_year, pre2021_selected$sexual_identity_baseline, useNA = "always" )
+summary( pre2021_selected )
+
+# SPHC 2021
+d_2021_selected <- d_2021 %>%
+  select( any_of( variable_list ) ) %>%
+  mutate( 
+    
+    sexual_identity_baseline = sexual_identity_2021,
+    
+    survey_year = "SPHC 2021",
+          
+    # generation
+    generation = factor(
+      case_when(
+        birth_year >= 1997 & birth_year <= 2012 ~ "Generation Z (1997–2012)",
+        birth_year >= 1981 & birth_year <= 1996 ~ "Millennials (1981–1996)",
+        birth_year >= 1965 & birth_year <= 1980 ~ "Generation X (1965–1980)",
+        birth_year >= 1946 & birth_year <= 1964 ~ "Baby Boomers (1946–1964)",
+        birth_year >= 1928 & birth_year <= 1945 ~ "Silent Generation (1928–1945)",
+        birth_year >= 1901 & birth_year <= 1927 ~ "Greatest Generation (1901–1927)" ), 
+      levels = c( "Generation Z (1997–2012)", "Millennials (1981–1996)", "Generation X (1965–1980)", "Baby Boomers (1946–1964)", "Silent Generation (1928–1945)", "Greatest Generation (1901–1927)" ) ) 
+    )
+
+summary( d_2021_selected )
+sum( duplicated( d_2021_selected$lopnr ) ) # 0
+table( d_2021_selected$sexual_identity_baseline, useNA = "always" )
+nrow( d_2021_selected ) # 23,066
+
+# merge cohorts
+d_all_selected <- bind_rows( pre2021_selected, d_2021_selected ) %>%
+  mutate( survey_year = as.factor( survey_year ),
+          age_2005 = 2005 - birth_year )
+summary( d_all_selected )
+sum( duplicated( d_all_selected$lopnr ) ) # 0
+nrow( d_all_selected ) # 133,419
+```
+
+#### 2.2. Birth year distribution
+```{r}
+# the overall pooled cohort
+# include those with missing sexual identity data
+# include those who reported other sexual identity
+
+p_birth_year <- 
+  ggplot( d_all_selected, aes( x = "", y = birth_year ) ) +
+  geom_violin( fill = "#69b3a2", trim = TRUE ) +
+  scale_y_continuous(
+    name = "Birth Year",
+    breaks = c( 2005, 1995, 1985, 1975, 1965, 1955, 1945, 1935, 1925, 1915, 1905 ) ) +
+  scale_x_discrete( position = "top" ) +
+  labs( x = paste0( "N = ", format( nrow( d_all_selected ), big.mark = "," ) ) ) +
+  theme_classic() +
+  theme( axis.ticks.x = element_blank(),
+         axis.line.x = element_blank(),
+         axis.line.y = element_blank(),
+         axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ) )
+
+p_birth_year
+ggsave( "results_output/plots_general/birth_year_distribution.svg", plot = p_birth_year, width = 7, height = 8 )
+
+
+p_birth_year_by_survey_year <- 
+  ggplot( d_all_selected %>% 
+            group_by( survey_year ) %>% 
+            mutate( survey_label = paste0( survey_year, "\n(N = ", format( n(), big.mark = "," ), ")" ) ) %>% 
+            ungroup(),
+  aes( x = survey_label, y = birth_year, fill = survey_label ) ) +
+  geom_violin( scale = "count", trim = TRUE ) +
+  scale_y_continuous(
+    name = "Birth Year",
+    breaks = c( 2005, 1995, 1985, 1975, 1965, 1955, 1945, 1935, 1925, 1915, 1905 ) ) +
+  labs( x = NULL ) +
+  coord_flip() +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.position = "none" )
+
+p_birth_year_by_survey_year
+ggsave( "results_output/plots_general/birth_year_distribution_by_year.svg", plot = p_birth_year_by_survey_year, width = 9, height = 7 )
+```
+
+#### 2.3. Follow-up period through registry
+```{r}
+### SPHC 2002 to 2014 ###
+
+# migration dates
+migration_date_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/migration_all_2002_2014.sas7bdat')
+summary( migration_date_2002_2014 )
+table( migration_date_2002_2014$Posttyp, useNA = "always" )
+
+migration_date_2002_2014 <- migration_date_2002_2014 %>%
+  rename( date = migrationdate, event_type = Posttyp ) %>%
+  mutate( event_type = as.factor( recode( event_type,
+                                          "Inv" = "move-in",
+                                          "Utv" = "move-out" ) ) )
+summary( migration_date_2002_2014 )
+length( unique( migration_date_2002_2014$lopnr ) ) # 12,409 had any moving-in and/or moving-out between 1990 and 2021
+length( intersect( unique( migration_date_2002_2014$lopnr ), d_all_selected$lopnr ) ) # 12,409
+
+# death dates
+date_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/dates_2002_2014.sas7bdat')
+summary( date_2002_2014 )
+length( unique( date_2002_2014$lopnr ) ) # 15,117
+length( unique( date_2002_2014$lopnr ) ) == nrow( date_2002_2014 ) # TRUE
+length( intersect( unique( date_2002_2014$lopnr ), d_all_selected$lopnr ) ) # 15,117
+
+date_2002_2014 %>%
+  filter( death_date != "" ) %>%
+  mutate( lengths = nchar( death_date ) ) %>%
+  count( lengths )
+
+death_date_2002_2014 <- date_2002_2014 %>%
+  select( "lopnr", "death_date" ) %>%
+  filter( death_date != "" ) %>%
+  mutate( death_date = as.Date( death_date, format = "%Y%m%d" ),
+          event_type = "death" ) %>%
+  rename( date = death_date )
+
+summary( death_date_2002_2014 )
+length( unique( death_date_2002_2014$lopnr ) ) # 8,614
+length( unique( death_date_2002_2014$lopnr ) ) == nrow( death_date_2002_2014 ) # TRUE
+length( intersect( unique( death_date_2002_2014$lopnr ), d_all_selected$lopnr ) ) # 8,614
+
+# merge dates
+dates_all_2002_2014 <- bind_rows( migration_date_2002_2014, death_date_2002_2014 ) %>%
+  mutate( event_type = factor( event_type, levels = c( "move-in", "move-out", "death" ) ) ) %>%
+  arrange( lopnr, date )
+summary( dates_all_2002_2014 )
+length( unique( dates_all_2002_2014$lopnr ) ) # 20,831
+length( intersect( unique( dates_all_2002_2014$lopnr ), d_all_selected$lopnr ) ) # 20,831
+
+
+### SPHC 2021 ###
+
+# migration dates
+migration_date_2021 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/migration_all_2021.sas7bdat') %>%
+  rename( lopnr = lopnr2 ) %>%
+  mutate( lopnr = lopnr + 600000 )
+summary( migration_date_2021 )
+table( migration_date_2021$Posttyp, useNA = "always" )
+
+migration_date_2021 <- migration_date_2021 %>%
+  rename( date = migrationdate, event_type = Posttyp ) %>%
+  mutate( event_type = as.factor( recode( event_type,
+                                          "Inv" = "move-in",
+                                          "Utv" = "move-out" ) ) )
+summary( migration_date_2021 )
+length( unique( migration_date_2021$lopnr ) ) # 4,313 had any moving-in and/or moving-out between 1990 and 2021
+length( intersect( unique( migration_date_2021$lopnr ), d_all_selected$lopnr ) ) # 4,313
+
+# death dates
+date_2021 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/dates_2021.sas7bdat') %>%
+  rename( lopnr = lopnr2 ) %>%
+  mutate( lopnr = lopnr + 600000 )
+summary( date_2021 )
+length( unique( date_2021$lopnr ) ) # 14
+length( unique( date_2021$lopnr ) ) == nrow( date_2021 ) # TRUE
+length( intersect( unique( date_2021$lopnr ), d_all_selected$lopnr ) ) # 14
+
+date_2021 %>%
+  filter( death_date != "" ) %>%
+  mutate( lengths = nchar( death_date ) ) %>%
+  count( lengths )
+
+death_date_2021 <- date_2021 %>%
+  select( "lopnr", "death_date" ) %>%
+  filter( death_date != "" ) %>%
+  mutate( death_date = as.Date( death_date, format = "%Y%m%d" ),
+          event_type = "death" ) %>%
+  rename( date = death_date )
+
+summary( death_date_2021 )
+length( unique( death_date_2021$lopnr ) ) # 14
+length( unique( death_date_2021$lopnr ) ) == nrow( death_date_2021 ) # TRUE
+length( intersect( unique( death_date_2021$lopnr ), d_all_selected$lopnr ) ) # 14
+
+# merge dates
+dates_all_2021 <- bind_rows( migration_date_2021, death_date_2021 ) %>%
+  mutate( event_type = factor( event_type, levels = c( "move-in", "move-out", "death" ) ) ) %>%
+  arrange( lopnr, date )
+summary( dates_all_2021 )
+length( unique( dates_all_2021$lopnr ) ) # 4,327
+length( intersect( unique( dates_all_2021$lopnr ), d_all_selected$lopnr ) ) # 4,327
+
+
+### CHECK DATES ###
+
+dates_all <- bind_rows( dates_all_2002_2014, dates_all_2021 )
+summary( dates_all )
+nrow( dates_all ) # 33,039
+length( unique( dates_all$lopnr ) ) # 25,158
+length( intersect( d_all_selected$lopnr, unique( dates_all$lopnr ) ) ) # 25,158
+
+# check if there are duplicate events
+id_with_duplicate_events <- dates_all %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  filter( event_type == lead( event_type ) ) %>%
+  pull( lopnr ) %>%
+  unique() # 7
+
+#View(
+#  dates_all %>%
+#  filter( lopnr %in% id_with_duplicate_events ) %>%
+#  left_join( d_all_selected %>% select( lopnr, survey_year ),
+#             by = "lopnr" ) %>%
+#  arrange( lopnr, date )
+#  )
+
+dates_with_dups <- dates_all %>%
+  filter( lopnr %in% id_with_duplicate_events ) %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  filter(
+    # keep first of repeated "move-in"
+    ( event_type == "move-in" & ( event_type != lag( event_type ) | is.na( lag( event_type ) ) ) ) |
+    
+    # keep last of repeated "move-out"
+    ( event_type == "move-out" & ( event_type != lead( event_type ) | is.na( lead( event_type ) ) ) ) ) %>%
+  ungroup()
+
+dates_all <- dates_all %>%
+  filter( !lopnr %in% id_with_duplicate_events ) %>%
+  bind_rows( dates_with_dups ) %>%
+  arrange( lopnr, date )
+
+# check if death appears more than once
+dates_all %>%
+  filter( event_type == "death" ) %>%
+  count( lopnr ) %>%
+  filter( n > 1 ) # 0
+
+# check if there is move-out before death
+id_move_out_before_death <- dates_all %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  mutate( prev_event = lag( event_type ) ) %>%
+  filter( event_type == "death" & prev_event == "move-out" ) %>%
+  pull( lopnr ) %>%
+  unique() # 2
+
+#View(
+#  dates_all %>%
+#  filter( lopnr %in% id_move_out_before_death ) %>%
+#  left_join( d_all_selected %>% select( lopnr, survey_year ),
+#             by = "lopnr" ) %>%
+#  arrange( lopnr, date ) 
+#  )
+
+dates_all <- dates_all %>%
+  filter( !( lopnr %in% id_move_out_before_death & event_type == "move-out" ) ) # exclude two move-out events
+
+# check if there is any event after death
+id_with_death <- dates_all %>%
+  filter( event_type == "death" ) %>%
+  pull( lopnr )
+
+dates_all %>%
+  filter( lopnr %in% id_with_death ) %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  mutate( aft_event = lead( event_type ) ) %>%
+  filter( event_type == "death" & !is.na( aft_event ) ) %>%
+  ungroup() # 0
+
+# check for duplicate id-event-date combinations
+dates_all %>%
+  count( lopnr, event_type, date ) %>%
+  filter( n > 1 ) # 0
+
+# check for reused personal number
+reusedpnr_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/reusedpnr_2002_2014.sas7bdat')
+reusedpnr_2021 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/reusedpnr_2021.sas7bdat') %>%
+  rename( lopnr = lopnr2 ) %>%
+  mutate( lopnr = lopnr + 600000 )
+
+reusedpnr_all <- bind_rows( reusedpnr_2002_2014, reusedpnr_2021 )
+nrow( reusedpnr_all ) # 130 reused personal numbers
+length( unique( reusedpnr_all$lopnr ) )
+length( intersect( reusedpnr_all$lopnr, d_all_selected$lopnr ) )
+
+intersect( reusedpnr_all$lopnr, id_with_duplicate_events ) # 0
+intersect( reusedpnr_all$lopnr, id_with_death ) # 0
+intersect( reusedpnr_all$lopnr, id_move_out_before_death ) # 0
+
+reusedpnr_all_dates <- reusedpnr_all %>%
+  left_join( dates_all, by = "lopnr" ) %>%
+  left_join( d_all_selected %>%
+               select( lopnr, survey_year, birth_year, country_of_birth ),
+             by = "lopnr" ) %>%
+  mutate( event_age = year( date ) - birth_year,
+          baseline_year = str_extract( survey_year, "\\d{4}" ) %>% as.numeric(),
+          baseline_age = baseline_year - birth_year,
+          age_2006 = 2006 - birth_year ) %>%
+  arrange( country_of_birth, survey_year, lopnr, date )
+
+nrow( reusedpnr_all_dates ) # 144
+length( unique( reusedpnr_all_dates$lopnr ) ) == length( reusedpnr_all$lopnr ) # 130
+summary( reusedpnr_all_dates )
+
+sampling_date <- data.frame(
+  survey_year = c( "SPHC 2002", "SPHC 2006", "SPHC 2010", "SPHC 2014", "SPHC 2021" ),
+  sampling_date = as.Date( c( "2002-10-08", "2006-08-09", "2009-12-31", "2014-08-31", "2021-04-08" ) ) )
+
+reusedpnr_all_dates <- reusedpnr_all_dates %>%
+  left_join( sampling_date, by = "survey_year" )
+
+id_no_events <- reusedpnr_all_dates %>%
+  filter( is.na( event_type ) ) %>% # those without events
+  pull( lopnr ) # 70 have remained in registry since 1990
+nrow( dates_all %>% filter( lopnr %in% id_no_events ) ) # already excluded
+
+reusedpnr_all_dates <- reusedpnr_all_dates %>%
+  filter( !lopnr %in% id_no_events )
+
+sweden_dates <- reusedpnr_all_dates %>% 
+  filter( country_of_birth == "Sweden" )
+dates_all %>% filter( lopnr %in% sweden_dates$lopnr ) # already included
+
+single_non_sweden_dates <- reusedpnr_all_dates %>%
+  filter( country_of_birth != "Sweden" ) %>%
+  group_by( lopnr ) %>%
+  filter( n() == 1 ) %>%
+  ungroup()
+table( single_non_sweden_dates$event_type, useNA = "always" ) # 50 move-in, 1 move-out
+single_non_sweden_dates %>% filter( date >= sampling_date  ) # 1 move-out
+
+identical(
+  single_non_sweden_dates %>% select( lopnr, event_type, date ) %>% arrange( lopnr, date ),
+  dates_all %>% filter( lopnr %in% single_non_sweden_dates$lopnr ) %>% arrange( lopnr, date )
+) # already included
+
+multiple_non_sweden_dates <- reusedpnr_all_dates %>%
+  filter( country_of_birth != "Sweden" ) %>%
+  group_by( lopnr ) %>%
+  filter( n() > 1 ) %>%
+  ungroup()
+table( multiple_non_sweden_dates$event_type, useNA = "always" )
+
+multiple_non_sweden_dates_1 <- multiple_non_sweden_dates %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  filter( first( event_type ) == "move-out" ) %>%
+  ungroup()
+dates_all %>% filter( lopnr %in% multiple_non_sweden_dates_1$lopnr ) # already included
+
+multiple_non_sweden_dates_2 <- multiple_non_sweden_dates %>%
+  filter( !lopnr %in% multiple_non_sweden_dates_1$lopnr ) %>%
+  group_by( lopnr ) %>%
+  mutate( latest_move_in_date = max( date[ event_type == "move-in" & date < sampling_date ] ) ) %>% # only start follow-up from the latest move-in date before sampling date among those born outside Sweden
+  filter( date >= latest_move_in_date ) %>%
+  ungroup() %>%
+  select( lopnr, event_type, date ) %>%
+  arrange( lopnr, date )
+length( unique( multiple_non_sweden_dates_2$lopnr ) ) # 7
+
+dates_all <- dates_all %>%
+  filter( !lopnr %in% multiple_non_sweden_dates_2$lopnr ) %>%
+  bind_rows( multiple_non_sweden_dates_2 ) # any move-in/move-out/death events between 1990 and 2021
+
+dates_all <- dates_all %>%
+  left_join( 
+    d_all_selected %>%
+      select( lopnr, birth_year, survey_year ),
+    by = "lopnr" ) %>% 
+  mutate( event_age = year( date ) - birth_year ) %>%
+  group_by( survey_year ) %>%
+  mutate( individual_id = dense_rank( lopnr ) ) %>% # generate continuous pseudo ID number
+  ungroup() %>%
+  arrange( lopnr, date )
+
+summary( dates_all )
+
+length( unique( dates_all[ dates_all$survey_year == "SPHC 2002", ]$lopnr ) ) # 5,503 in SPHC 2002
+max( dates_all[ dates_all$survey_year == "SPHC 2002", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC 2006", ]$lopnr ) ) # 6,938 in SPHC 2006
+max( dates_all[ dates_all$survey_year == "SPHC 2006", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC 2010", ]$lopnr ) ) # 5,208 in SPHC 2010
+max( dates_all[ dates_all$survey_year == "SPHC 2010", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC 2014", ]$lopnr ) ) # 3,182 in SPHC 2014
+max( dates_all[ dates_all$survey_year == "SPHC 2014", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC 2021", ]$lopnr ) ) # 4,327 in SPHC 2021
+max( dates_all[ dates_all$survey_year == "SPHC 2021", ]$individual_id )
+
+sampling_date <- sampling_date %>%
+  rowwise() %>%
+  mutate(
+    yend = max( dates_all$individual_id[ dates_all$survey_year == survey_year ] ) + 40 ) %>%
+  ungroup() %>%
+  rename( sampling_dt = sampling_date )
+
+closest_events <- dates_all %>% # check the closet event before sampling date
+  left_join( sampling_date %>% select( survey_year, sampling_dt ), by = "survey_year" ) %>%
+  mutate( days_before_sampling = as.numeric( sampling_dt - date ) ) %>%
+  filter( days_before_sampling >= 0 )
+summary( closest_events$days_before_sampling ) # range from 1 to 11,413 days
+table( closest_events$event_type, useNA = "always" ) # confirm that no death event before sampling
+
+id_move_out_before_sampling <- 
+  closest_events %>%
+  arrange( lopnr, days_before_sampling ) %>%
+  group_by( lopnr ) %>%
+  slice( 1 ) %>%
+  ungroup() %>%
+  filter( event_type == "move-out" ) %>%
+  pull( lopnr ) # 28 had move-out before sampling date, likely due to technical errors
+
+intersect( id_move_out_before_sampling, reusedpnr_all$lopnr ) # 0
+intersect( id_move_out_before_sampling, id_with_overlap ) # 1 (moved out on 1994-02-21)
+dates_all %>% filter( lopnr %in% id_move_out_before_sampling ) %>% count( survey_year )
+
+#dates_all %>%
+#  filter( lopnr %in% id_move_out_before_sampling ) %>%
+#  left_join( sampling_date %>% select( survey_year, sampling_dt ), by = "survey_year" ) %>%
+#  arrange( lopnr, date ) %>%
+#  View()
+
+# plotting
+p_registry_dates <- 
+  ggplot( dates_all,
+          aes( x = date, y = individual_id, color = event_type ) ) +
+  
+  geom_point( size = 1.5 ) +
+  
+  geom_segment(
+     data = sampling_date,
+     aes( x = sampling_dt, xend = sampling_dt, y = -Inf, yend = yend ),
+     inherit.aes = FALSE,
+     linetype = "dashed",
+     color = "grey20",
+     linewidth = 0.5
+   ) +
+  
+  scale_color_manual(
+    values = c( "move-in" = "green", "move-out" = "blue", "death" = "red" ),
+    labels = c( "move-in" = "Move to Sweden", "move-out" = "Move outside Sweden", "death" = "Death" ) ) +
+
+  scale_x_date(
+    limits = as.Date( c( "1990-01-01", NA ) ),
+    breaks = seq( as.Date( "1990-01-01" ), as.Date( "2022-01-01" ), by = "2 years" ),
+    date_labels = "%Y",
+    expand = c( 0.02, 0 ) ) +
+  
+  labs( x = "Calendar Year", y = "Number of Participants" ) +
+  
+  theme_classic() +
+  theme(
+    axis.text = element_text( family = "Arial", size = 11 ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.line.y = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11, margin = margin( b = 5 ) ),
+    panel.spacing = unit( 1.5, "lines" ),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ) ) +
+  
+  facet_wrap( ~ survey_year,
+              ncol = 1,
+              scales = "free_y",
+              labeller = labeller(
+                survey_year = c(
+                  "SPHC 2002" = paste0( "SPHC 2002 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2002" ] ), big.mark = "," ), ")" ),
+                  "SPHC 2006" = paste0( "SPHC 2006 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2006" ] ), big.mark = "," ), ")" ),
+                  "SPHC 2010" = paste0( "SPHC 2010 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2010" ] ), big.mark = "," ), ")" ),
+                  "SPHC 2014" = paste0( "SPHC 2014 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2014" ] ), big.mark = "," ), ")" ),
+                  "SPHC 2021" = paste0( "SPHC 2021 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2021" ] ), big.mark = "," ), ")" )
+                  ) ) ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    survey_year == "SPHC 2002" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
+    survey_year == "SPHC 2006" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000, 7000 ) ),
+    survey_year == "SPHC 2010" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
+    survey_year == "SPHC 2014" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000 ) ),
+    survey_year == "SPHC 2021" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000, 4000 ) ) )
+    )
+
+p_registry_dates
+ggsave( "results_output/plots_general/registry_dates.svg", plot = p_registry_dates, width = 15, height = 12 )
+
+# age at death
+p_death_age_year <- 
+  ggplot( dates_all %>% filter( event_type == "death" ),
+          aes( x = event_age, fill = factor( year( date ) ) ) ) +
+  
+  geom_bar( position = "stack", alpha = 0.8 ) +
+  
+  scale_fill_viridis_d( name = "Year at Death", option = "mako" ) +
+  
+  scale_x_continuous(
+    limits = c( 20, 110 ),
+    breaks = seq( 20, 110, by = 10 ),
+    expand = expansion( mult = c( 0.02, 0 ) ) ) +
+  
+  scale_y_continuous( 
+    limits = c( 0, 450 ),
+    breaks = seq( 0, 450, by = 50 ),
+    expand = expansion( mult = c( 0, 0 ) ) ) +
+  
+  labs( x = "Age (y) at Death",
+        y = "Number of Participants" ) +
+  
+  theme_classic() +
+  theme(
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.position = "right",
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ) )
+
+p_death_age_year
+ggsave( "results_output/plots_general/age_at_death.svg", plot = p_death_age_year, width = 10, height = 8 )
+```
+
+### 3. Registry-Based Outcomes
+#### 3.2. Use of antidepressants and anxiolytics
+```{r}
+# dispensed prescription: antidepressants (N06A) and anxiolytics (N05B)
+# between 2006-01-01 and 2021-12-31
+# not include the year 2005 because it only covers 6 months
+
+atc_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/atc_pdr_2002_2014.sas7bdat') %>%
+  filter( !grepl( "^N05CD", ATC ) ) %>%
+  rename( dispense_date = EDATUM ) %>%
+  filter( dispense_date >= as.Date( "2006-01-01" ) )
+summary( atc_2002_2014 )
+unique( atc_2002_2014$ATC )
+
+atc_2021 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/atc_pdr_2021.sas7bdat') %>%
+  filter( !grepl( "^N05CD", ATC ) ) %>%
+  rename( lopnr = lopnr2, dispense_date = EDATUM ) %>%
+  mutate( lopnr = lopnr + 600000 ) %>%
+  select( lopnr, ATC, dispense_date ) %>%
+  filter( dispense_date >= as.Date( "2006-01-01" ) )
+summary( atc_2021 )
+unique( atc_2021$ATC )
+  
+atc_all <- bind_rows( atc_2002_2014, atc_2021 ) %>%
+  mutate( 
+    drug_class = as.factor( 
+      case_when(
+        grepl( "^N06A", ATC ) ~ "N06A",
+        grepl( "^N05B", ATC ) ~ "N05B" ) ),
+    year = year( dispense_date ) )
+summary( atc_all )
+unique( atc_all$ATC )
+```
+
+### 4. Series of Cross-Sectional Analysis
+#### 4.1. Construct study sample
+```{r}
+yearly_sample <- list()
+
+for ( yr in 2001:2021 ) {
+  
+  birth_year_cutoff_lower <- yr - 29
+  birth_year_cutoff_upper <- yr - 16
+  
+  study_sample <- d_all_selected %>%
+    filter( birth_year >= birth_year_cutoff_lower,
+            birth_year <= birth_year_cutoff_upper ) %>% # 16-29 years old
+    mutate( age = yr - birth_year )
+    
+  yearly_sample[[ as.character( yr ) ]] <- study_sample
+}
+
+# convert to long format
+pooled_sample_cs <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
+  mutate( sample_year = as.integer( sample_year ) ) %>%
+  select( sample_year, lopnr, sex, age, country_of_birth, sexual_identity_baseline, survey_year )
+summary( pooled_sample_cs )
+
+# random check incomplete variables
+miss_var_summary( pooled_sample_cs %>% filter( sample_year == 2001 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs %>% filter( sample_year == 2006 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs %>% filter( sample_year == 2010 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs %>% filter( sample_year == 2014 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs %>% filter( sample_year == 2021 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+
+sample_summary_cs <- pooled_sample_cs %>%
+  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ) ) %>%
+  group_by( sample_year, sexual_identity_baseline ) %>%
+  summarise( n = n(), .groups = "drop" ) %>%
+  mutate( identity_group = case_when( 
+            sexual_identity_baseline %in% c( "Heterosexual" ) ~ "Heterosexual",
+            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other", "Missing" ) ~ "Sexual Minority or Missing" ) ) %>%
+  arrange( identity_group, n )
+
+
+p_sample_cs <- ggplot(
+  sample_summary_cs,
+  aes( x = sample_year,
+       y = n,
+       color = sexual_identity_baseline,
+       group = sexual_identity_baseline ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_x_continuous(
+    limits = c( 2001, 2021 ),
+    breaks = seq( 2001, 2021, 4 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_color_manual( values = c(
+    "Heterosexual" = "#F8766D",
+    "Homosexual"   = "#00BFC4",
+    "Bisexual"     = "#C77CFF",
+    "Other"        = "#7CAE00",
+    "Missing"      = "#7f7f7f" ) ) +
+  
+  labs( x = "Cross-Sectional Sample Year",
+        y = "Number of Participants",
+        color = NULL ) +
+  
+  facet_wrap( ~ identity_group, scales = "free_y" ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    panel.spacing = unit( 1.5, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    identity_group == "Heterosexual" ~ scale_y_continuous( limits = c( 4000, 22000 ), breaks = c( seq( 4000, 22000, 2000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ),
+    identity_group == "Sexual Minority or Missing" ~ scale_y_continuous( limits = c( 0, 5000 ), breaks = c( seq( 0, 5000, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  coord_capped_cart( bottom = 'right', gap = 0 )
+
+p_sample_cs
+ggsave( "results_output/plots_general/p_sample_cs.svg", plot = p_sample_cs, width = 11, height = 6 )
+```
+
+#### 4.2. Check overlapping participants
+```{r}
+# among all participants
+lopnr_years_all <- pooled_data_cs %>%
+  select( lopnr, year ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_cs_upset_all.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_all,
+  nsets = length( colnames( lopnr_years_all )[-1] ),
+  sets = colnames( lopnr_years_all )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+  )
+dev.off()
+
+# among 16-29 years
+lopnr_years_1 <- pooled_data_cs %>%
+  filter( age <= 29 ) %>%
+  select( lopnr, year ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_cs_upset_age_16_29.pdf", width = 11, height = 9, onefile = FALSE ) # upset plot
+upset(
+  data = lopnr_years_1,
+  nsets = length( colnames( lopnr_years_1 )[-1] ),
+  sets = colnames( lopnr_years_1 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+  )
+dev.off()
+
+lopnr_years_alluvial_1 <- lopnr_years_1 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+          ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_1$number ) == nrow( lopnr_years_1 ) # TRUE
+
+lopnr_years_alluvial_long_1 <- to_lodes_form( lopnr_years_alluvial_1, # convert to long format
+                                              axes = 1:8, 
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_cs_alluvial_1 <- 
+  ggplot( lopnr_years_alluvial_long_1,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cross-Sectional Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+         )
+
+p_overlap_cs_alluvial_1
+ggsave( "results_output/plots_general/p_overlap_cs_alluvial_age_16_29.svg", plot = p_overlap_cs_alluvial_1, width = 12, height = 9 )
+
+# among 30-44 years
+lopnr_years_2 <- pooled_data_cs %>%
+  filter( age >= 30,
+          age <= 44 ) %>%
+  select( lopnr, year ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_cs_upset_age_30_44.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_2,
+  nsets = length( colnames( lopnr_years_2 )[-1] ),
+  sets = colnames( lopnr_years_2 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+  )
+dev.off()
+
+lopnr_years_alluvial_2 <- lopnr_years_2 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+  ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_2$number ) == nrow( lopnr_years_2 ) # TRUE
+
+lopnr_years_alluvial_long_2 <- to_lodes_form( lopnr_years_alluvial_2, # convert to long format
+                                              axes = 1:8, 
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_cs_alluvial_2 <- 
+  ggplot( lopnr_years_alluvial_long_2,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cross-Sectional Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+  )
+
+p_overlap_cs_alluvial_2
+ggsave( "results_output/plots_general/p_overlap_cs_alluvial_age_30_44.svg", plot = p_overlap_cs_alluvial_2, width = 12, height = 9 )
+
+# among 45-59 years
+lopnr_years_3 <- pooled_data_cs %>%
+  filter( age >= 45,
+          age <= 59 ) %>%
+  select( lopnr, year ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_cs_upset_age_45_59.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_3,
+  nsets = length( colnames( lopnr_years_3 )[-1] ),
+  sets = colnames( lopnr_years_3 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+  )
+dev.off()
+
+lopnr_years_alluvial_3 <- lopnr_years_3 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+  ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_3$number ) == nrow( lopnr_years_3 ) # TRUE
+
+lopnr_years_alluvial_long_3 <- to_lodes_form( lopnr_years_alluvial_3, # convert to long format
+                                              axes = 1:8, 
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_cs_alluvial_3 <- 
+  ggplot( lopnr_years_alluvial_long_3,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cross-Sectional Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+  )
+
+p_overlap_cs_alluvial_3
+ggsave( "results_output/plots_general/p_overlap_cs_alluvial_age_45_59.svg", plot = p_overlap_cs_alluvial_3, width = 12, height = 9 )
+```
+
+#### 4.3. Add outcome data
+```{r}
+followup_start <- as.Date( paste0( yr, "-01-01" ) )
+  followup_end <- as.Date( paste0( yr, "-12-31" ) )
+  
+eligible_dates <- dates_all %>%
+    filter( birth_year >= birth_year_cutoff_lower,
+            birth_year <= birth_year_cutoff_upper )
+
+  move_in_ids <- eligible_dates %>%
+    filter( date < followup_start ) %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice_tail( n = 1 ) %>%
+    ungroup() %>%
+    filter( event_type == "move-in" ) %>%
+    pull( lopnr )
+
+  had_event_ids <- eligible_dates %>%
+    filter( lopnr %in% move_in_ids, 
+            date >= followup_start, 
+            date <= followup_end ) %>%
+    pull( lopnr ) %>%
+    unique()
+
+  move_in_before_year_ids <- setdiff( move_in_ids, had_event_ids )
+    
+  move_out_after_year_ids <- eligible_dates %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice( 1 ) %>%
+    ungroup() %>%
+    filter( date > followup_end, 
+            event_type %in% c( "move-out", "death" ) ) %>%
+    pull( lopnr )
+
+  included_year_ids <- union( move_in_before_year_ids, move_out_after_year_ids )
+  
+  excluded_year_ids <- eligible_dates %>%
+    filter( !lopnr %in% included_year_ids ) %>%
+    pull( lopnr ) %>%
+    unique()
+# ATC data
+    atc_yearly_summary <- atc_all %>%
+      filter( year == yr, 
+              drug_class == drug_code ) %>%
+      group_by( lopnr ) %>%
+      summarise( outcome_count = n() ) %>%
+      ungroup()
+    
+    reincluded_year_ids <- atc_yearly_summary %>%
+      filter( lopnr %in% excluded_year_ids ) %>%
+      pull( lopnr )
+    
+    
+    left_join( atc_yearly_summary, by = "lopnr" ) %>%
+      mutate(
+        outcome_count = replace_na( outcome_count, 0 ),
+        outcome_binary = as.factor( ifelse( outcome_count > 0, "Yes", "No" ) ),
+        age = yr - birth_year
+        )
+    
+study_sample_final <- study_sample %>%
+      mutate( 
+        outcome_binary = if_else(
+          lopnr %in% setdiff( excluded_year_ids, reincluded_year_ids ),
+          NA,
+          outcome_binary
+          ),
+        
+        outcome_count = if_else(
+          lopnr %in% excluded_year_ids,
+          NA,
+          outcome_count
+          )
+        )
+  
+```
+
+#### 4.4. Complete-case analysis
+```{r}
+outcome_list <- list(
+  list( variable = "prescription_use_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "prescription_use_N05B", condition = "Yes", name = "anxiolytic_use" )
+  )
+
+########## Prevalence ##########
+
+# by sexual identity
+results_list <- cal_prev_poo_cc( year_start = 2006, 
+                                 year_end = 2021,
+                                 data = pooled_data_cs,
+                                 variables_list = outcome_list,
+                                 group_var = "sexual_identity_baseline" )
+
+prevalence_poo <- bind_rows( results_list )
+writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_cs_cc.xlsx" )
+
+# by sex
+results_list_by_sex <- cal_prev_poo_cc( year_start = 2006,
+                                        year_end = 2021,
+                                        data = pooled_data_cs,
+                                        variables_list = outcome_list,
+                                        group_var = "sexual_identity_baseline + sex",
+                                        subgroup = TRUE )
+
+prevalence_poo_by_sex <- bind_rows( results_list_by_sex )
+writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_cs_by_sex_cc.xlsx" )
+
+# by age
+results_list_by_age <- cal_prev_poo_cc( year_start = 2006,
+                                        year_end = 2021,
+                                        data = pooled_data_cs,
+                                        variables_list = outcome_list,
+                                        group_var = "sexual_identity_baseline + age_group",
+                                        subgroup = TRUE )
+
+prevalence_poo_by_age <- bind_rows( results_list_by_age )
+writexl::write_xlsx( prevalence_poo_by_age, "results_output/results_cc/prevalence_poo_cs_by_age_cc.xlsx" )
+
+# by age and sex
+results_list_by_age_sex <- cal_prev_poo_cc( year_start = 2006,
+                                            year_end = 2021,
+                                            data = pooled_data_cs,
+                                            variables_list = outcome_list,
+                                            group_var = "sexual_identity_baseline + age_sex",
+                                            subgroup = TRUE )
+
+prevalence_poo_by_age_sex <- bind_rows( results_list_by_age_sex )
+writexl::write_xlsx( prevalence_poo_by_age_sex, "results_output/results_cc/prevalence_poo_cs_by_age_sex_cc.xlsx" )
+
+# by generation
+results_list_by_generation <- cal_prev_poo_cc( year_start = 2006,
+                                               year_end = 2021,
+                                               data = pooled_data_cs,
+                                               variables_list = outcome_list,
+                                               group_var = "sexual_identity_baseline + generation",
+                                               subgroup = TRUE )
+
+prevalence_poo_by_generation <- bind_rows( results_list_by_generation )
+writexl::write_xlsx( prevalence_poo_by_generation, "results_output/results_cc/prevalence_poo_cs_by_generation_cc.xlsx" )
+
+
+########## Prevalence Ratio ##########
+
+str( pooled_data_cs )
+
+# crude analysis
+models_list_crude <- cal_rr_poo_cc( year_start = 2006,
+                                    year_end = 2021,
+                                    data = pooled_data_cs %>%
+                                      mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
+                                              prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
+                                    exposure = "sexual_identity_baseline",
+                                    outcome_list = outcome_list )
+
+# adjusted analysis
+models_list_adjusted <- cal_rr_poo_cc( year_start = 2006,
+                                       year_end = 2021,
+                                       data = pooled_data_cs %>%
+                                         mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
+                                                 prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
+                                       exposure = "sexual_identity_baseline",
+                                       outcome_list = outcome_list,
+                                       covariates = "age + sex + country_of_birth" )
+
+
+rr_crude_cc <- extract_rr_poo_cc(
+  model_list = models_list_crude,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+rr_adjusted_cc <- extract_rr_poo_cc(
+  model_list = models_list_adjusted,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+rr_poo_cc <- bind_rows( rr_crude_cc, rr_adjusted_cc )
+writexl::write_xlsx( rr_poo_cc, "results_output/results_cc/rr_poo_cs_cc.xlsx" )
+
+
+########## Prevalence Difference ##########
+
+str( pooled_data_cs )
+
+# crude analysis
+models_list_crude <- cal_rd_poo_cc( year_start = 2006,
+                                    year_end = 2021,
+                                    data = pooled_data_cs %>%
+                                      mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
+                                              prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
+                                    exposure = "sexual_identity_baseline",
+                                    outcome_list = outcome_list )
+
+# adjusted analysis
+models_list_adjusted <- cal_rd_poo_cc( year_start = 2006,
+                                       year_end = 2021,
+                                       data = pooled_data_cs %>%
+                                         mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
+                                                 prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
+                                       exposure = "sexual_identity_baseline",
+                                       outcome_list = outcome_list,
+                                       covariates = "age + sex + country_of_birth" )
+
+
+rd_crude_cc <- extract_rd_poo_cc(
+  model_list = models_list_crude,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+rd_adjusted_cc <- extract_rd_poo_cc(
+  model_list = models_list_adjusted,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+rd_poo_cc <- bind_rows( rd_crude_cc, rd_adjusted_cc )
+writexl::write_xlsx( rd_poo_cc, "results_output/results_cc/rd_poo_cs_cc.xlsx" )
+```
+
+#### 3.3. Series of cohort analysis
+##### 3.3.1. Construct study sample
+```{r}
+drug_codes <- c( "N06A", "N05B" )
+
+yearly_summaries <- list()
+
+for ( drug_code in drug_codes ) {
+  
+  for ( yr in 2006:2021 ) {
+    
+    followup_start <- as.Date( paste0( yr, "-01-01" ) )
+    followup_end <- as.Date( "2021-12-31" )
+    birth_year_cutoff <- yr - 16
+
+    eligible_dates <- dates_all %>%
+      filter( birth_year <= birth_year_cutoff )
+
+    move_in_ids <- eligible_dates %>%
+      filter( date < followup_start ) %>%
+      arrange( lopnr, date ) %>%
+      group_by( lopnr ) %>%
+      slice_tail( n = 1 ) %>%
+      ungroup() %>%
+      filter( event_type == "move-in" ) %>%
+      pull( lopnr )
+
+    had_event_ids <- eligible_dates %>%
+      filter( lopnr %in% move_in_ids, 
+              date >= followup_start, 
+              date <= followup_end ) %>%
+      pull( lopnr ) %>%
+      unique()
+
+    included_year_ids <- setdiff( move_in_ids, had_event_ids )
+    
+    excluded_year_ids <- eligible_dates %>%
+      filter( !lopnr %in% included_year_ids ) %>%
+      pull( lopnr ) %>%
+      unique()
+    
+    study_sample <- d_all_selected %>%
+      filter( birth_year <= birth_year_cutoff, # 16 years or older
+              !lopnr %in% excluded_year_ids )
+    
+    # ATC data
+    atc_yearly_summary <- atc_all %>%
+      filter( year >= yr,
+              drug_class == drug_code ) %>%
+      group_by( lopnr, year ) %>%
+      summarise( prescription_count = n(),
+                 .groups = "drop" )
+    
+    all_combos <- expand.grid( lopnr = study_sample$lopnr,
+                               year = year( followup_start ):year( followup_end ) )
+    
+    sample_atc <- all_combos %>%
+      left_join( study_sample, by = "lopnr" ) %>%
+      left_join( atc_yearly_summary, by = c( "lopnr", "year" ) ) %>%
+      mutate(
+        prescription_count = replace_na( prescription_count, 0 ),
+        prescription_use = as.factor( ifelse( prescription_count > 0, "Yes", "No" ) ),
+        age = yr - birth_year,
+        age_group = categorize_age_group( age )
+        )
+    
+    yearly_summaries[[ paste0( drug_code, "_", yr ) ]] <- sample_atc
+    }
+  }
+
+# convert to long format
+summary_long_co <- bind_rows( yearly_summaries, .id = "cohort" ) %>%
+  select( - age_2005 )
+summary( summary_long_co )
+
+N06A_co <- summary_long_co %>%
+  filter( grepl( "^N06A", cohort ) ) %>%
+  mutate( cohort_year = as.numeric( str_extract( cohort, "\\d{4}$" ) ) ) %>%
+  select( -1 ) %>%
+  rename(
+    prescription_use_N06A = prescription_use,
+    prescription_count_N06A = prescription_count
+  )
+
+N05B_co <- summary_long_co %>%
+  filter( grepl( "^N05B", cohort ) ) %>%
+  mutate( cohort_year = as.numeric( str_extract( cohort, "\\d{4}$" ) ) ) %>%
+  select( -1 ) %>%
+  rename(
+    prescription_use_N05B = prescription_use,
+    prescription_count_N05B = prescription_count
+  )
+
+pooled_data_co <- left_join(
+  N06A_co, N05B_co,
+  by = c( "cohort_year", "year", "lopnr", "sexual_identity_2010", "sexual_identity_2014", "sexual_identity_2021", "birth_year", "sex", "country_of_birth", "survey_year", "sexual_identity_baseline", "generation", "age", "age_group" ) ) %>%
+  mutate( age_sex = interaction( age_group, sex ) ) %>%
+  select( cohort_year, lopnr, year, age, age_group, sex, age_sex, birth_year, generation, country_of_birth, sexual_identity_baseline, sexual_identity_2010, sexual_identity_2014, sexual_identity_2021, survey_year, everything() ) %>%
+  filter( age >= 16, age <= 59 )
+
+summary( pooled_data_co )
+
+# random check incomplete variables
+miss_var_summary( pooled_data_co %>% filter( cohort_year == 2006 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_data_co %>% filter( cohort_year == 2010 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_data_co %>% filter( cohort_year == 2014 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_data_co %>% filter( cohort_year == 2021 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+
+sample_summary_co <- pooled_data_co %>%
+  distinct( cohort_year, lopnr, sexual_identity_baseline ) %>%
+  group_by( cohort_year, sexual_identity_baseline ) %>%
+  summarise( n = n(), .groups = "drop" ) %>%
+  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ),
+          identity_group = case_when( sexual_identity_baseline %in% c( "Heterosexual", "Missing" ) ~ "Heterosexual or Missing",
+                                      sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other" ) ~ "Sexual Minority" ) ) %>%
+  arrange( cohort_year, sexual_identity_baseline )
+
+p_sample_co <- ggplot(
+  sample_summary_co,
+  aes( x = cohort_year,
+       y = n,
+       color = sexual_identity_baseline,
+       group = sexual_identity_baseline ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_x_continuous(
+    limits = c( 2006, 2021 ),
+    breaks = seq( 2006, 2021, 3 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_color_manual( values = c(
+    "Heterosexual" = "#F8766D",
+    "Homosexual"   = "#00BFC4",
+    "Bisexual"     = "#C77CFF",
+    "Other"        = "#7CAE00",
+    "Missing"      = "#7f7f7f" ) ) +
+  
+  labs( x =  "Year of Cohort Sample",
+        y = "Number of Participants",
+        color = NULL ) +
+  
+  facet_wrap( ~ identity_group, scales = "free_y" ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    panel.spacing = unit( 1.5, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    identity_group == "Heterosexual or Missing" ~ scale_y_continuous( limits = c( 9000, 70000 ), breaks = c( seq( 10000, 70000, 10000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ),
+    identity_group == "Sexual Minority" ~ scale_y_continuous( limits = c( 900, 2000 ), breaks = c( seq( 1000, 2000, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  coord_capped_cart( bottom = 'right', gap = 0 )
+
+p_sample_co
+ggsave( "results_output/plots_general/p_sample_co.svg", plot = p_sample_co, width = 11, height = 6 )
+```
+
+##### 3.3.2. Check overlapping participants
+```{r}
+# among all participants
+lopnr_years_all <- pooled_data_co %>%
+  select( cohort_year, lopnr ) %>%
+  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = cohort_year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_co_upset_all.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_all,
+  nsets = length( colnames( lopnr_years_all )[-1] ),
+  sets = colnames( lopnr_years_all )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+)
+dev.off()
+
+# among 16-29 years
+lopnr_years_1 <- pooled_data_co %>%
+  filter( age <= 29 ) %>%
+  select( cohort_year, lopnr ) %>%
+  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = cohort_year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_co_upset_age_16_29.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_1,
+  nsets = length( colnames( lopnr_years_1 )[-1] ),
+  sets = colnames( lopnr_years_1 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+)
+dev.off()
+
+lopnr_years_alluvial_1 <- lopnr_years_1 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+  ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_1$number ) == nrow( lopnr_years_1 ) # TRUE
+
+lopnr_years_alluvial_long_1 <- to_lodes_form( lopnr_years_alluvial_1, # convert to long format
+                                              axes = 1:8,
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_co_alluvial_1 <- 
+  ggplot( lopnr_years_alluvial_long_1,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+  )
+
+p_overlap_co_alluvial_1
+ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_16_29.svg", plot = p_overlap_co_alluvial_1, width = 12, height = 9 )
+
+# among 30-44 years
+lopnr_years_2 <- pooled_data_co %>%
+  filter( age >= 30,
+          age <= 44 ) %>%
+  select( cohort_year, lopnr ) %>%
+  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = cohort_year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_co_upset_age_30_44.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_2,
+  nsets = length( colnames( lopnr_years_2 )[-1] ),
+  sets = colnames( lopnr_years_2 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+)
+dev.off()
+
+lopnr_years_alluvial_2 <- lopnr_years_2 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+  ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_2$number ) == nrow( lopnr_years_2 ) # TRUE
+
+lopnr_years_alluvial_long_2 <- to_lodes_form( lopnr_years_alluvial_2, # convert to long format
+                                              axes = 1:8, 
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_co_alluvial_2 <- 
+  ggplot( lopnr_years_alluvial_long_2,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+  )
+
+p_overlap_co_alluvial_2
+ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_30_44.svg", plot = p_overlap_co_alluvial_2, width = 12, height = 9 )
+
+# among 45-59 years
+lopnr_years_3 <- pooled_data_co %>%
+  filter( age >= 45,
+          age <= 59 ) %>%
+  select( cohort_year, lopnr ) %>%
+  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = cohort_year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_co_upset_age_45_59.pdf", width = 11, height = 9, onefile = FALSE )
+upset(
+  data = lopnr_years_3,
+  nsets = length( colnames( lopnr_years_3 )[-1] ),
+  sets = colnames( lopnr_years_3 )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
+)
+dev.off()
+
+lopnr_years_alluvial_3 <- lopnr_years_3 %>% # prepare for alluvial plot
+  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+  ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+sum( lopnr_years_alluvial_3$number ) == nrow( lopnr_years_3 ) # TRUE
+
+lopnr_years_alluvial_long_3 <- to_lodes_form( lopnr_years_alluvial_3, # convert to long format
+                                              axes = 1:8,
+                                              key = "year", 
+                                              value = "inclusion_status", 
+                                              id = "cohort", 
+                                              diffuse = `2006` ) 
+
+p_overlap_co_alluvial_3 <- 
+  ggplot( lopnr_years_alluvial_long_3,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2006` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+  )
+
+p_overlap_co_alluvial_3
+ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_45_59.svg", plot = p_overlap_co_alluvial_3, width = 12, height = 9 )
+```
+
+##### 3.3.3. Complete-case analysis
+```{r}
+outcome_list <- list(
+  list( variable = "prescription_use_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "prescription_use_N05B", condition = "Yes", name = "anxiolytic_use" )
+  )
+
+########## Prevalence ##########
+
+# by sexual identity
+results_list <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = coh_year,
+                              year_end = 2021,
+                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
+                              variables_list = outcome_list,
+                              group_var = "sexual_identity_baseline" )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo <- bind_rows( results_list )
+writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_co_cc.xlsx" )
+
+# by sex
+results_list_by_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = coh_year,
+                              year_end = 2021,
+                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
+                              variables_list = outcome_list,
+                              group_var = "sexual_identity_baseline + sex",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_sex <- bind_rows( results_list_by_sex )
+writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" )
+
+# by age
+results_list_by_age <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = coh_year,
+                              year_end = 2021,
+                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
+                              variables_list = outcome_list,
+                              group_var = "sexual_identity_baseline + age_group",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_age <- bind_rows( results_list_by_age )
+writexl::write_xlsx( prevalence_poo_by_age, "results_output/results_cc/prevalence_poo_co_by_age_cc.xlsx" )
+
+# by age and sex
+results_list_by_age_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = coh_year,
+                              year_end = 2021,
+                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
+                              variables_list = outcome_list,
+                              group_var = "sexual_identity_baseline + age_sex",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_age_sex <- bind_rows( results_list_by_age_sex )
+writexl::write_xlsx( prevalence_poo_by_age_sex, "results_output/results_cc/prevalence_poo_co_by_age_sex_cc.xlsx" )
+
+# by generation
+results_list_by_generation <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = coh_year,
+                              year_end = 2021,
+                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
+                              variables_list = outcome_list,
+                              group_var = "sexual_identity_baseline + generation",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_generation <- bind_rows( results_list_by_generation )
+writexl::write_xlsx( prevalence_poo_by_generation, "results_output/results_cc/prevalence_poo_co_by_generation_cc.xlsx" )
+```
