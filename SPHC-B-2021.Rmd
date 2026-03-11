@@ -326,6 +326,26 @@ d_2021_complete <- bind_rows( d_2021, replicated_rows ) # 47,885 individuals in 
 
 d_2021_complete <- d_2021_complete[ , c( 1, 12, 13, 15, 37:56 ) ]
 summary( d_2021_complete )
+
+# check death events
+load('/Volumes/projects/LGBT Project data/Swedish Registers/dates_all.RData') # cleaned migration data
+
+dates_all %>%
+  filter( lopnr %in% d_2021_complete$lopnr,
+          event_type == "death" ) %>%
+  mutate( year = lubridate::year( date ) ) %>%
+  count( year, name = "n_deaths" ) %>%
+  mutate( year = as.character( year ) ) %>%
+  bind_rows( summarise( ., year = "Total", n_deaths = sum( n_deaths ) ) ) # 14 death events in 2021
+
+death_ids <- dates_all %>%
+  filter( lopnr %in% d_2021_complete$lopnr,
+          event_type == "death") %>%
+  pull( lopnr )
+
+# dates_all %>%
+#   filter( lopnr %in% death_ids ) %>%
+#   View() # no migration events
 ```
 
 ### 3. Mental Health Outcomes
@@ -359,7 +379,6 @@ table( d_2021_complete$suicide_attempts, useNA = "always" )
 #### 3.2. Registry-based
 ##### 3.2.1. Check migration events
 ```{r}
-load('/Volumes/projects/LGBT Project data/Swedish Registers/dates_all.RData') # cleaned migration data
 summary( dates_all )
 
 eligible_dates <- dates_all %>%
@@ -388,7 +407,7 @@ had_event_ids <- eligible_dates %>%
 
 move_in_before_year_ids <- setdiff( move_in_ids, had_event_ids )
 
-included_year_ids <- move_in_before_year_ids # among those who had any migration event
+included_year_ids <- union( move_in_before_year_ids, death_ids ) # among those who had any migration event
 
 excluded_year_ids <- eligible_dates %>%
   filter( !lopnr %in% included_year_ids ) %>%
@@ -396,11 +415,8 @@ excluded_year_ids <- eligible_dates %>%
   unique() # identify participants who were not continuously registered in 2021
 
 eligible_dates %>%
-  filter( lopnr %in% excluded_year_ids,
-          date >= followup_start ) %>%
-  count( event_type ) # 14 death events in 2021
-
-# for those who had a death event in 2021, their prevalence outcome data will be treated as missing values, unless they experienced the outcome in 2021; their outcome data (i.e., prevalence data before death) will be imputed during multiple imputation
+  filter( lopnr %in% excluded_year_ids ) %>%
+  count( event_type ) # no death events
 ```
 
 ##### 3.2.2. Use of antidepressants and anxiolytics
@@ -438,17 +454,17 @@ atc_2021_summary_wide <- atc_2021_summary %>%
 
 summary( atc_2021_summary_wide )
 
-length( intersect( atc_2021_summary_wide$lopnr, excluded_year_ids ) ) # 6 excluded participants had prescription data, so their prevalence data will be treated as observed
+length( intersect( atc_2021_summary_wide$lopnr, excluded_year_ids ) ) # 1 excluded participants had prescription data, so their prevalence data will be treated as observed
 
 reincluded_year_ids_N06A <- atc_2021_summary_wide %>%
   filter( lopnr %in% excluded_year_ids,
           used_N06A == "Yes" ) %>%
-  pull( lopnr ) # 3 had dispensed prescription of antidepressants
+  pull( lopnr ) # 1 had dispensed prescription of antidepressants
 
 reincluded_year_ids_N05B <- atc_2021_summary_wide %>%
   filter( lopnr %in% excluded_year_ids,
           used_N05B == "Yes" ) %>%
-  pull( lopnr ) # 4 had dispensed prescription of anxiolytics
+  pull( lopnr ) # 0 had dispensed prescription of anxiolytics
 ```
 
 #### 3.3. Construct study sample

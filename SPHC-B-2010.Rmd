@@ -350,6 +350,17 @@ d_2010_complete <- bind_rows( d_2010, replicated_rows ) # 55,341 individuals in 
 
 d_2010_complete <- d_2010_complete[ , c( 1, 16, 17, 19, 30:50 ) ]
 summary( d_2010_complete )
+
+# check death events
+load('/Volumes/projects/LGBT Project data/Swedish Registers/dates_all.RData')
+
+dates_all %>%
+  filter( lopnr %in% d_2010_complete$lopnr,
+          event_type == "death" ) %>%
+  mutate( year = lubridate::year( date ) ) %>%
+  count( year, name = "n_deaths" ) %>%
+  mutate( year = as.character( year ) ) %>%
+  bind_rows( summarise( ., year = "Total", n_deaths = sum( n_deaths ) ) ) # no death events in 2010
 ```
 
 ### 3. Mental Health Outcomes
