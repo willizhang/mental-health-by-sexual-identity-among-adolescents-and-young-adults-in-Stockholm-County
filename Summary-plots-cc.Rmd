@@ -557,7 +557,7 @@ p_pr_pd <- ggplot(
       "Homosexual_Adjusted" = "Homosexual (Adjusted)",
       "Homosexual_Crude"    = "Homosexual (Crude)" ),
     
-    guide = guide_legend( nrow = 2 ) ) +
+    guide = guide_legend( nrow = 1 ) ) +
   
   labs( x = "Survey Year",
         y = "Estimate (95% CI)",
