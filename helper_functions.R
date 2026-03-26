@@ -131,7 +131,7 @@ cal_pd_indi_cc <- function( design, exposure, outcome_list, year, covariates = N
 
 
 
-##### Pooled Cohort #####
+##### Pooled Sample #####
 
 # prevalence by sexual identity
 cal_prev_poo_cc <- function( year_start, year_end, data, variables_list, group_var, subgroup = FALSE ) {
@@ -140,9 +140,9 @@ cal_prev_poo_cc <- function( year_start, year_end, data, variables_list, group_v
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( year == yr )
+    data_year <- data %>% filter( sample_year == yr )
     
-    design <- svydesign( ids = ~1, data = data_year )
+    design <- svydesign( ids = ~ 1, data = data_year )
     
     for ( var in variables_list ) {
       
@@ -162,16 +162,6 @@ cal_prev_poo_cc <- function( year_start, year_end, data, variables_list, group_v
       } else {
         colnames( svyby_result )[ -1 ] <- c( "point_estimate", "lower_ci", "upper_ci" )
       }
-      
-      group_vars <- strsplit( group_var, "\\s*\\+\\s*")[[1]]
-      
-      sample_size <- data_year %>%
-        drop_na( all_of( c( var$variable, group_vars ) ) ) %>%
-        group_by( across( all_of( group_vars ) ) ) %>%
-        summarise( n = n(), .groups = "drop" )
-      
-      svyby_result <- svyby_result %>%
-        left_join( sample_size, by = group_vars )
       
       svyby_result <- svyby_result %>%
         mutate(
@@ -194,7 +184,7 @@ cal_pr_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( year == yr )
+    data_year <- data %>% filter( sample_year == yr )
     
     design <- svydesign( ids = ~1, data = data_year )
     
@@ -206,7 +196,7 @@ cal_pr_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
                              if ( !is.null( covariates ) ) paste0( " + ", covariates ) else "" )
       
       mod <- svyglm( formula = as.formula( formula_str ),
-                     design = subset( design, !is.na( get( outcome$variable ) ) & !is.na( get( exposure ) ) ), 
+                     design = design, 
                      family = quasipoisson( link = "log" ) ) # Poisson regression
   
       model_list[[ paste0( outcome$name, "_", yr ) ]] <- mod
@@ -219,13 +209,13 @@ cal_pr_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
 
 
 # calculate prevalence difference
-cal_rd_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, covariates = NULL ) {
+cal_pd_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, covariates = NULL ) {
   
   model_list <- list()
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( year == yr )
+    data_year <- data %>% filter( sample_year == yr )
     
     design <- svydesign( ids = ~1, data = data_year )
     
@@ -237,7 +227,7 @@ cal_rd_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
                              if ( !is.null( covariates ) ) paste0( " + ", covariates ) else "" )
       
       mod <- svyglm( formula = as.formula( formula_str ),
-                     design = subset( design, !is.na( get( outcome$variable ) ) & !is.na( get( exposure ) ) ), 
+                     design = design, 
                      family = gaussian( link = "identity" ) )
       
       model_list[[ paste0( outcome$name, "_", yr ) ]] <- mod
@@ -249,8 +239,7 @@ cal_rd_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
 }
 
 
-
-##### Individual Surveys and Pooled Cohort #####
+##### Individual Surveys and Pooled Sample #####
 
 # extract prevalence ratio
 extract_pr_cc <- function( model_list, exposure_var ) {

@@ -900,12 +900,6 @@ outpatient_2002_2014 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Re
 summary( outpatient_2002_2014 )
 
 outpatient_2002_2014 %>%
-  filter(
-    is.na( socialstyrelsen_outpatient ),
-    is.na( val_outpatient ),
-    is.na( val_kon ) ) # 0
-
-outpatient_2002_2014 %>%
   mutate( lengths = nchar( indatuma ) ) %>%
   count( lengths )
 
@@ -925,35 +919,114 @@ outpatient_2002_2014 %>%
 #   View()
 
 outpatient_2002_2014 <- outpatient_2002_2014 %>%
-  mutate( diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) %>% # the first four digits represent year
-  select( lopnr, diagnosis_year, depression, anxiety, stress_related )
+  mutate( diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) # the first four digits represent year
 summary( outpatient_2002_2014 )
+
+outpatient_2002_2014 %>%
+  filter(
+    is.na( depression ),
+    is.na( anxiety ),
+    is.na( stress_related ) ) # 0
+
+outpatient_2002_2014 %>%
+  filter(
+    is.na( socialstyrelsen_outpatient ),
+    is.na( val_outpatient ),
+    is.na( val_kon ) ) # 0
+
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$socialstyrelsen_outpatient ) ] )
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_outpatient ) ] ) # val_outpatient includes both specialist outpatient care during 2001-2019 and primary care during 2013-2019
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_kon ) ] ) # val_kon includes primary care data during 2003-2012
+
+# check indicator variable
+table( outpatient_2002_2014$vardniva, useNA = "always" )
+str( outpatient_2002_2014$vardniva )
+
+outpatient_2002_2014 <- outpatient_2002_2014 %>%
+  mutate( vardniva = na_if( vardniva, "" ) )
+
+outpatient_2002_2014 %>%
+  filter( vardniva == "01" ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2013-2019
+
+outpatient_2002_2014 %>%
+  filter( vardniva == "02" ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2003-2019
+
+
+missing_pattern( outpatient_2002_2014 %>%
+                   select( val_outpatient, vardniva ))
+
+outpatient_2002_2014 %>%
+  filter( is.na( vardniva ) ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2003-2019
+
+
+table( outpatient_2002_2014$diagnosis_year, outpatient_2002_2014$vardniva )
+table( outpatient_2002_2014$val_outpatient, useNA = "always" )
+
+outpatient_2002_2014 %>%
+  filter(val_outpatient == 1,
+         vardniva != "",
+         !is.na( vardniva )) %>%
+   mutate( lengths = nchar( indatuma ) ) %>%
+  count( lengths )
+  
+  
+  
+  group_by(lopnr, indatuma) %>%
+  filter(n() > 1) %>%
+  arrange(lopnr, indatuma)
+
+outpatient_2002_2014 %>%
+  filter( diagnosis_year >= 2013,
+          diagnosis_year <= 2019,
+          !is.na( val_outpatient ) ) %>%
+  count( vardniva )
+  
+
+
 
 # inpatient care
 inpatient_2002_2014 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Registers/mental_diagnoses_inpatient.dta')
 summary( inpatient_2002_2014 )
 
 inpatient_2002_2014 %>%
-  filter(
-    is.na( socialstyrelsen_inpatient ),
-    is.na( val_inpatient ) ) # 0
-
-inpatient_2002_2014 %>%
   mutate( lengths = nchar( indatuma ) ) %>%
   count( lengths )
 
 inpatient_2002_2014 <- inpatient_2002_2014 %>%
-  mutate( diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) %>% # the first four digits represent year
-  select( lopnr, diagnosis_year, depression, anxiety, stress_related )
+  mutate( diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) # the first four digits represent year
 summary( inpatient_2002_2014 )
 
+inpatient_2002_2014 %>%
+  filter(
+    is.na( depression ),
+    is.na( anxiety ),
+    is.na( stress_related ) ) # 0
+
+inpatient_2002_2014 %>%
+  filter(
+    is.na( socialstyrelsen_inpatient ),
+    is.na( val_inpatient ) ) # 0
+
+setdiff( 2001:2021, inpatient_2002_2014$diagnosis_year[ !is.na( inpatient_2002_2014$socialstyrelsen_inpatient ) ] )
+setdiff( 2001:2021, inpatient_2002_2014$diagnosis_year[ !is.na( inpatient_2002_2014$val_inpatient ) ] )
+
+
 # merge data
-d_diagnosis_2002_2014 <- bind_rows( outpatient_2002_2014, inpatient_2002_2014 )
+d_diagnosis_2002_2014 <- bind_rows( outpatient_2002_2014 %>% 
+                                      select( lopnr, diagnosis_year, depression, anxiety, stress_related ), 
+                                    inpatient_2002_2014 %>%
+                                      select( lopnr, diagnosis_year, depression, anxiety, stress_related ) )
 summary( d_diagnosis_2002_2014 )
 
-n_distinct( d_diagnosis_2002_2014$lopnr ) == length( intersect( 
-  unique( d_diagnosis_2002_2014$lopnr ),
-  d_all_selected$lopnr[ d_all_selected$survey_year != "SPHC 2021" ] ) ) # TRUE
+n_distinct( d_diagnosis_2002_2014$lopnr ) == 
+  length( intersect( unique( d_diagnosis_2002_2014$lopnr ),
+                     d_all_selected$lopnr[ d_all_selected$survey_year != "SPHC 2021" ] ) ) # TRUE
 
 
 ##### SPHC 2021 #####
@@ -963,6 +1036,18 @@ inpatient_2021 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Register
 
 summary( outpatient_2021 )
 summary( inpatient_2021 )
+
+outpatient_2021 %>%
+  filter(
+    is.na( depression ),
+    is.na( anxiety ),
+    is.na( stress_related ) ) # 0
+
+inpatient_2021 %>%
+  filter(
+    is.na( depression ),
+    is.na( anxiety ),
+    is.na( stress_related ) ) # 0
 
 outpatient_2021 %>%
   mutate( lengths = nchar( indatuma ) ) %>%
@@ -975,21 +1060,22 @@ inpatient_2021 %>%
 outpatient_2021 <- outpatient_2021 %>%
   rename( lopnr = lopnr2  ) %>%
   mutate( lopnr = lopnr + 600000,
-          diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) %>%
-  select( lopnr, diagnosis_year, depression, anxiety, stress_related )
+          diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) )
 
 inpatient_2021 <- inpatient_2021 %>%
   rename( lopnr = lopnr2  ) %>%
   mutate( lopnr = lopnr + 600000,
-          diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) ) %>%
-  select( lopnr, diagnosis_year, depression, anxiety, stress_related )
+          diagnosis_year = as.integer( substr( indatuma, 1, 4 ) ) )
 
-d_diagnosis_2021 <- bind_rows( outpatient_2021, inpatient_2021 )
+d_diagnosis_2021 <- bind_rows( outpatient_2021 %>%
+                                 select( lopnr, diagnosis_year, depression, anxiety, stress_related ), 
+                               inpatient_2021 %>%
+                                 select( lopnr, diagnosis_year, depression, anxiety, stress_related ) )
 summary( d_diagnosis_2021 )
 
-n_distinct( d_diagnosis_2021$lopnr ) == length( intersect( 
-  unique( d_diagnosis_2021$lopnr ),
-  d_all_selected$lopnr[ d_all_selected$survey_year == "SPHC 2021" ] ) ) # TRUE
+n_distinct( d_diagnosis_2021$lopnr ) == 
+  length( intersect( unique( d_diagnosis_2021$lopnr ),
+                     d_all_selected$lopnr[ d_all_selected$survey_year == "SPHC 2021" ] ) ) # TRUE
 
 
 ##### merge data #####
@@ -1018,12 +1104,167 @@ d_all_diagnosis_summary <- d_all_diagnosis %>%
     stress_related = factor( stress_related, levels = c( "Yes", "No" ) ) )
 
 summary( d_all_diagnosis_summary )
+
+
+# plot register coverage
+coverage_df <- tibble(
+  registry = c( "NPR: Inpatient care", 
+                "NPR: Specialist outpatient care", 
+                "VAL: Inpatient care", 
+                "VAL: Specialist outpatient care", 
+                "VAL: Primary care",
+                "Prescribed Drug Register" ),
+  start = c( 2001, 2001, 2001, 2001, 2003, 2005 ),
+  end   = c( 2021, 2021, 2019, 2019, 2019, 2021 ) ) %>%
+  
+  mutate(
+    care_type = case_when(
+      grepl( "Inpatient", registry ) ~ "Inpatient",
+      grepl( "Specialist", registry ) ~ "Specialist outpatient",
+      grepl( "Primary", registry ) ~ "Primary care",
+      registry == "Prescribed Drug Register" ~ "Dispensed prescription" ),
+    
+    registry = factor( registry, levels = c( "Prescribed Drug Register", "NPR: Inpatient care", "VAL: Inpatient care", "NPR: Specialist outpatient care", "VAL: Specialist outpatient care", "VAL: Primary care" ) ),
+    care_type = factor( care_type, levels =  c( "Primary care", "Specialist outpatient", "Inpatient", "Dispensed prescription" ) ) )
+
+p_register_coverage <- 
+  ggplot( coverage_df, aes( y = registry, color = care_type ) ) +
+  
+  geom_segment(
+    aes( x = start, xend = end, yend = registry ),
+    linewidth = 4.5 ) +
+  
+  geom_text(
+    aes( x = ( start + end )/2, label = paste0( start, "–", end ) ),
+    color = "black",
+    size = 3.7,
+    vjust = -1 ) +
+  
+  scale_x_continuous(
+    breaks = seq( 2001, 2021, 2 ),
+    limits = c( 2001, 2021 ),
+    expand = expansion( mult = c( 0.05, 0.02 ) ) ) +
+  
+  scale_color_manual( values = c(
+    "Primary care" = "#F8766D",
+    "Specialist outpatient" = "#C77CFF",
+    "Inpatient" = "#00BFC4",
+    "Dispensed prescription" = "#7CAE00" ) ) +
+  
+  labs(
+    x = "Calendar Year",
+    y = NULL,
+    color = NULL ) +
+  
+  theme_classic() +
+  theme(
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "right" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' )
+
+p_register_coverage
+ggsave( "results_output/plots_general/p_register_coverage.svg", plot = p_register_coverage, width = 12, height = 6 )
+
+
+# plot data sources
+diagnosis_source_summary <- d_diagnosis_2002_2014 %>%
+  
+  filter( diagnosis_year >= 2003, 
+          diagnosis_year <= 2019 ) %>%
+  
+  pivot_longer(
+    cols = c( depression, anxiety, stress_related ),
+    names_to = "outcome",
+    values_to = "value" ) %>%
+  
+  filter( value == 1 ) %>%
+  
+  # reshape ALL sources (outpatient + inpatient)
+  pivot_longer(
+    cols = c(
+      socialstyrelsen_outpatient,
+      socialstyrelsen_inpatient,
+      val_outpatient,
+      val_inpatient,
+      val_kon
+    ),
+    names_to = "source",
+    values_to = "has_record"
+  ) %>%
+  
+  # keep only present sources
+  filter(!is.na(has_record)) %>%
+  
+  # harmonise source labels
+  mutate(
+    source = case_when(
+      source %in% c("socialstyrelsen_outpatient", "socialstyrelsen_inpatient") ~ "NPR",
+      source %in% c("val_outpatient", "val_inpatient") ~ "VAL",
+      source == "val_kon" ~ "VAL primary"
+    ),
+    
+    outcome = recode(outcome,
+                     depression = "Depression",
+                     anxiety = "Anxiety Disorders",
+                     stress_related = "Stress-Related Disorders"
+    )
+  ) %>%
+  
+  distinct(lopnr, diagnosis_year, outcome, source) %>%
+  
+  # count individuals (not visits)
+  count(diagnosis_year, outcome, source) %>%
+  
+  group_by(diagnosis_year, outcome) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+p_source <- ggplot(
+  diagnosis_source_summary,
+  aes(x = diagnosis_year, y = prop, fill = source)
+) +
+  
+  geom_area(alpha = 0.8) +
+  
+  facet_wrap(~ outcome, ncol = 1) +
+  
+  scale_y_continuous(labels = scales::percent_format()) +
+  
+  scale_x_continuous(
+    breaks = seq(2003, 2019, 4),
+    expand = expansion(mult = c(0.02, 0.02))
+  ) +
+  
+  scale_fill_manual(values = c(
+    "NPR" = "#F8766D",
+    "VAL" = "#00BFC4",
+    "VAL primary" = "#7CAE00"
+  )) +
+  
+  labs(
+    x = "Year",
+    y = "Proportion of Diagnoses",
+    fill = "Data Source"
+  ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(size = 11),
+    legend.position = "bottom"
+  )
+
+p_source
 ```
 
 #### 3.2. Use of antidepressants and anxiolytics
 ```{r}
 # dispensed prescription: antidepressants (N06A) and anxiolytics (N05B)
-# between 2005-07-01 and 2021-12-31
+# between 2005-06-30/2005-07-01 and 2021-12-31
 # the year 2005 only covers 6 months
 
 atc_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/atc_pdr_2002_2014.sas7bdat') %>%
@@ -1065,19 +1306,22 @@ summary( atc_all_summary )
 ### 4. Series of Cross-Sectional Analysis
 #### 4.1. Construct study samples
 ```{r}
+# include death dates
 death_df <- dates_all %>%
   filter( event_type == "death" ) %>%
-  select( lopnr, death_date = date )
+  select( lopnr, date ) %>%
+  rename( death_date = date )
 n_distinct( death_df$lopnr )
 
-death_df %>%
-  filter( format( death_date, "%m-%d" ) == "01-01" )
+# death_df %>%
+#   filter( format( death_date, "%m-%d" ) == "01-01" )
 
 d_all_selected_death <- d_all_selected %>%
   left_join( death_df, by = "lopnr" )
 summary( d_all_selected_death$death_date )
+nrow( d_all_selected_death[ !is.na( d_all_selected_death$death_date ), ] )
 
-
+# create study samples
 yearly_sample <- list()
 
 for ( yr in 2001:2021 ) {
@@ -1093,12 +1337,10 @@ for ( yr in 2001:2021 ) {
   yearly_sample[[ as.character( yr ) ]] <- study_sample
 }
 
-# convert to long format
 pooled_sample_cs <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
   mutate( sample_year = as.integer( sample_year ) ) %>%
   select( sample_year, lopnr, sex, age, country_of_birth, sexual_identity_baseline, survey_year, death_date ) %>%
-  mutate( death_same_year = factor( !is.na( death_date ) & 
-                                      lubridate::year( death_date ) == sample_year,
+  mutate( death_same_year = factor( year( death_date ) == sample_year,
                                     levels = c( FALSE, TRUE ),
                                     labels = c( "No", "Yes" ) ) )
 
@@ -1121,14 +1363,16 @@ pooled_sample_cs %>%
 
 pooled_sample_cs <- pooled_sample_cs %>%
   select( - death_date ) %>%
-  rename( death = death_same_year )
+  rename( death = death_same_year ) %>%
+  mutate( death = if_else( is.na( death ), "No", death ),
+          death = factor( death, levels = c( "Yes", "No" ) ) )
 
 summary( pooled_sample_cs )
 ```
 
 #### 4.2. Plot samples
 ```{r}
-pooled_sample_cs_summary <- pooled_sample_cs %>%
+plot_sample_cs <- pooled_sample_cs %>%
   mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ) ) %>%
   group_by( sample_year, sexual_identity_baseline ) %>%
   summarise( n = n(), .groups = "drop" ) %>%
@@ -1139,7 +1383,7 @@ pooled_sample_cs_summary <- pooled_sample_cs %>%
 
 # plot sample size by year
 p_pooled_sample_cs <- ggplot(
-  pooled_sample_cs_summary,
+  plot_sample_cs,
   aes( x = sample_year,
        y = n,
        color = sexual_identity_baseline,
@@ -1271,12 +1515,15 @@ pooled_sample_cs <- pooled_sample_cs %>%
   left_join( atc_all_summary, by = c( "sample_year" = "year", "lopnr" ) ) %>%
   left_join( d_all_diagnosis_summary, by = c( "sample_year" = "diagnosis_year", "lopnr" ) ) %>%
   mutate(
+    # assuming absence of outcome when no records; migration data was later used to determine missing outcome data
     across( c( used_N05B, used_N06A ),
-            ~ if_else( sample_year >= 2006 & is.na( .x ), "No", .x ) ),
+            ~ if_else( sample_year >= 2005 & is.na( .x ), "No", .x ) ),
     across( c( depression, anxiety, stress_related ),
-            ~ replace_na( .x, "No" ) ), # assuming no record = no outcome; below migration data was used to determine missing outcome
+            ~ replace_na( .x, "No" ) ),
+    
     used_N05B = factor( used_N05B, levels = c( "Yes", "No" ) ),
-    used_N06A = factor( used_N06A, levels = c( "Yes", "No" ) ) ) %>%
+    used_N06A = factor( used_N06A, levels = c( "Yes", "No" ) ) 
+    ) %>%
   arrange( lopnr, sample_year )
 
 summary( pooled_sample_cs )
@@ -1284,14 +1531,18 @@ summary( pooled_sample_cs )
 # sanity check
 summary(
   pooled_sample_cs %>%
-    filter( sample_year < 2006 ) )
+    filter( sample_year < 2005 ) )
+
+summary(
+  pooled_sample_cs %>%
+    filter( sample_year >= 2005 ) )
 ```
 
 #### 4.4. Add follow-up data
 ```{r}
-dates_all %>%
-  filter( lopnr %in% pooled_sample_cs$lopnr[ pooled_sample_cs$death == "Yes" ] ) %>%
-  View() # for individuals who died, they did not have any migration events during the same year; therefore, their register status for the year when they died was treated as TRUE
+# dates_all %>%
+#   filter( lopnr %in% pooled_sample_cs$lopnr[ pooled_sample_cs$death == "Yes" ] ) %>%
+#   View() # for individuals who died, they did not have any migration events during the same year; thus, their register status for the year when they died was treated as TRUE
 
 # check migration events
 yearly_sample <- list()
@@ -1337,7 +1588,8 @@ for ( yr in 2001:2021 ) {
             death == "Yes" ) %>%
     pull( lopnr )
 
-  included_year_ids <- union( union( move_in_before_year_ids, move_out_after_year_ids ), death_ids )
+  included_year_ids <- union( union( move_in_before_year_ids, move_out_after_year_ids ), 
+                              death_ids )
   
   excluded_year_ids <- eligible_dates %>%
     filter( !lopnr %in% included_year_ids ) %>%
@@ -1351,29 +1603,206 @@ for ( yr in 2001:2021 ) {
   yearly_sample[[ as.character( yr ) ]] <- study_sample
   }
 
-# convert to long format
 pooled_sample_cs_final <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
   mutate( sample_year = as.numeric( sample_year ) )
+
 summary( pooled_sample_cs_final )
+str( pooled_sample_cs_final )
+
+identical(
+  pooled_sample_cs_final %>% select( -registered_year ) %>% arrange( lopnr, sample_year ),
+  pooled_sample_cs %>% mutate( sample_year = as.numeric( sample_year ) ) %>% arrange( lopnr, sample_year )
+) # TRUE
+
+
+# prescription data only have a half year of coverage in 2005
+# check register status during this period
+{  
+  followup_start <- as.Date( "2005-07-01" )
+  followup_end <- as.Date( "2005-12-31" )
+  
+  ids_year <- pooled_sample_cs$lopnr[ pooled_sample_cs$sample_year == 2005 ]
+  
+  eligible_dates <- dates_all %>% filter( lopnr %in% ids_year )
+  
+  move_in_ids <- eligible_dates %>%
+    filter( date < followup_start ) %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice_tail( n = 1 ) %>%
+    ungroup() %>%
+    filter( event_type == "move-in" ) %>%
+    pull( lopnr )
+
+  had_event_ids <- eligible_dates %>%
+    filter( lopnr %in% move_in_ids, 
+            date >= followup_start, 
+            date <= followup_end ) %>%
+    pull( lopnr ) %>%
+    unique()
+  
+  move_in_before_year_ids <- setdiff( move_in_ids, had_event_ids )
+    
+  move_out_after_year_ids <- eligible_dates %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice( 1 ) %>%
+    ungroup() %>%
+    filter( date > followup_end,
+            event_type %in% c( "move-out", "death" ) ) %>%
+    pull( lopnr )
+
+  included_year_ids <- union( move_in_before_year_ids, move_out_after_year_ids )
+  
+  excluded_year_ids <- eligible_dates %>%
+    filter( !lopnr %in% included_year_ids ) %>%
+    pull( lopnr ) %>%
+    unique()
+}
 
 pooled_sample_cs_final <- pooled_sample_cs_final %>%
+  mutate(
+    registered_half_2005 = case_when(
+      sample_year != 2005 ~ NA,
+      lopnr %in% excluded_year_ids ~ FALSE,
+      TRUE ~ TRUE ) )
+
+table( pooled_sample_cs_final$registered_half_2005, useNA = "always" )
+pooled_sample_cs_final %>%
+  filter( sample_year != 2005 ) %>%
+  count( registered_half_2005 )
+
+pooled_sample_cs_final %>%
+  filter( sample_year == 2005 ) %>%
+  count( registered_year, registered_half_2005 )
+
+# introduce missing data
+pooled_sample_cs_final <- pooled_sample_cs_final %>%
   mutate( across( c( used_N05B, used_N06A ),
-                  ~ if_else( sample_year >= 2006 & registered_year == FALSE & .x == "No", NA, .x ) ),
+                  ~ case_when( sample_year == 2005 & registered_half_2005 == FALSE & .x == "No" ~ NA,
+                               sample_year >= 2006 & registered_year == FALSE & .x == "No" ~ NA,
+                               TRUE ~ .x ) ),
+          
           across( c( depression, anxiety, stress_related ),
-                  ~ if_else( registered_year == FALSE & .x == "No", NA, .x ) ) )
+                  ~ if_else( registered_year == FALSE & .x == "No", NA, .x ) ) ) %>%
+  select( -c( registered_year, registered_half_2005, death ) )
 
 summary( pooled_sample_cs_final )
-pooled_sample_cs_final %>%
-  filter( registered_year == FALSE ) %>%
-  count( sample_year, registered_year ) %>% 
-  print( n = Inf )
 
 # random check incomplete variables
-miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2001 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2002 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
 miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2006 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
 miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2010 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
 miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2014 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
 miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2021 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+
+# check missing pattern
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2006 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2010 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2014 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2021 ) )
+
+# plot missing variables
+missing_summary_cs <- pooled_sample_cs_final %>%
+  select( sample_year, sexual_identity_baseline, used_N05B, used_N06A, depression, anxiety, stress_related ) %>%
+  group_by( sample_year ) %>%
+  summarise( across( everything(),
+                     ~ mean( is.na( .x ) ),
+                     .names = "{.col}" ) ) %>%
+  pivot_longer( cols = - sample_year,
+                names_to = "variable",
+                values_to = "percent_missing" ) %>%
+  mutate( variable = factor( variable, 
+                             levels = c( "sexual_identity_baseline", "depression", "anxiety", "stress_related", "used_N06A", "used_N05B" ) ) )
+
+p_missing_cs <- ggplot( 
+  missing_summary_cs %>%
+    filter( !( sample_year < 2005 & variable %in% c( "used_N05B", "used_N06A" ) ) ),
+  aes( x = sample_year, y = percent_missing ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  labs(
+    x = "Cross-Sectional Sample Year",
+    y = "Percentage of Missingness" ) +
+  
+  facet_wrap( ~ variable,
+              ncol = 3,
+              axes = "all",
+              scales = "free",
+              labeller = labeller( variable = c(
+                depression = "Depression",
+                anxiety = "Anxiety Disorders",
+                stress_related = "Stress-Related Disorders",
+                used_N05B = "Anxiolytic Use",
+                used_N06A = "Antidepressant Use",
+                sexual_identity_baseline = "Sexual Identity" ) ) ) +
+  
+  ggh4x::facetted_pos_scales( 
+    x = list(
+      variable %in% c( "sexual_identity_baseline", "depression", "anxiety", "stress_related" ) ~
+        scale_x_continuous( breaks = seq( 2001, 2021, 4 ),
+                            limits = c( 2001, 2021 ),
+                            expand = expansion( mult = c( 0.08, 0.02 ) ) ),
+      
+      variable %in% c( "used_N05B", "used_N06A" ) ~
+        scale_x_continuous( breaks = seq( 2005, 2021, 4 ),
+                            limits = c( 2005, 2021 ),
+                            expand = expansion( mult = c( 0.08, 0.02 ) ) ) ),
+    
+    y = list(
+      variable == "sexual_identity_baseline" ~ 
+        scale_y_continuous( limits = c( 0, 0.2 ),
+                            breaks = c( seq( 0, 0.2, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "depression" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "anxiety" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "stress_related" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+      variable == "used_N06A" ~ 
+        scale_y_continuous( limits = c( 0, 0.1 ),
+                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+      variable == "used_N05B" ~ 
+        scale_y_continuous( limits = c( 0, 0.1 ),
+                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_missing_cs
+ggsave( "results_output/plots_general/p_missing_cs.svg", plot = p_missing_cs, width = 14, height = 9 )
 ```
 
 #### 4.5. Complete-case analysis
@@ -1397,142 +1826,170 @@ results_list_1 <- cal_prev_poo_cc( year_start = 2001,
                                    variables_list = outcome_list_1,
                                    group_var = "sexual_identity_baseline" )
 
-results_list_2 <- cal_prev_poo_cc( year_start = 2006, 
+results_list_2 <- cal_prev_poo_cc( year_start = 2005, 
                                    year_end = 2021,
                                    data = pooled_sample_cs_final,
                                    variables_list = outcome_list_2,
                                    group_var = "sexual_identity_baseline" )
 
-prevalence_cs_1 <- bind_rows( results_list_1 )
-prevalence_cs_2 <- bind_rows( results_list_2 )
-prevalence_poo <- bind_rows( prevalence_cs_1, prevalence_cs_2 )
+prevalence_poo <- bind_rows( bind_rows( results_list_1 ), 
+                             bind_rows( results_list_2 ) )
 writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_cs_cc.xlsx" )
 
-
-
 # by sex
-results_list_by_sex <- cal_prev_poo_cc( year_start = 2006,
-                                        year_end = 2021,
-                                        data = pooled_data_cs,
-                                        variables_list = outcome_list,
-                                        group_var = "sexual_identity_baseline + sex",
-                                        subgroup = TRUE )
+results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2001, 
+                                          year_end = 2021,
+                                          data = pooled_sample_cs_final,
+                                          variables_list = outcome_list_1,
+                                          group_var = "sexual_identity_baseline + sex",
+                                          subgroup = TRUE )
 
-prevalence_poo_by_sex <- bind_rows( results_list_by_sex )
+results_list_by_sex_2 <- cal_prev_poo_cc( year_start = 2005, 
+                                          year_end = 2021,
+                                          data = pooled_sample_cs_final,
+                                          variables_list = outcome_list_2,
+                                          group_var = "sexual_identity_baseline + sex",
+                                          subgroup = TRUE )
+
+prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
+                                    bind_rows( results_list_by_sex_2 ) )
 writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_cs_by_sex_cc.xlsx" )
-
-# by age
-results_list_by_age <- cal_prev_poo_cc( year_start = 2006,
-                                        year_end = 2021,
-                                        data = pooled_data_cs,
-                                        variables_list = outcome_list,
-                                        group_var = "sexual_identity_baseline + age_group",
-                                        subgroup = TRUE )
-
-prevalence_poo_by_age <- bind_rows( results_list_by_age )
-writexl::write_xlsx( prevalence_poo_by_age, "results_output/results_cc/prevalence_poo_cs_by_age_cc.xlsx" )
-
-# by age and sex
-results_list_by_age_sex <- cal_prev_poo_cc( year_start = 2006,
-                                            year_end = 2021,
-                                            data = pooled_data_cs,
-                                            variables_list = outcome_list,
-                                            group_var = "sexual_identity_baseline + age_sex",
-                                            subgroup = TRUE )
-
-prevalence_poo_by_age_sex <- bind_rows( results_list_by_age_sex )
-writexl::write_xlsx( prevalence_poo_by_age_sex, "results_output/results_cc/prevalence_poo_cs_by_age_sex_cc.xlsx" )
-
-# by generation
-results_list_by_generation <- cal_prev_poo_cc( year_start = 2006,
-                                               year_end = 2021,
-                                               data = pooled_data_cs,
-                                               variables_list = outcome_list,
-                                               group_var = "sexual_identity_baseline + generation",
-                                               subgroup = TRUE )
-
-prevalence_poo_by_generation <- bind_rows( results_list_by_generation )
-writexl::write_xlsx( prevalence_poo_by_generation, "results_output/results_cc/prevalence_poo_cs_by_generation_cc.xlsx" )
 
 
 ########## Prevalence Ratio ##########
 
-str( pooled_data_cs )
+str( pooled_sample_cs_final )
 
 # crude analysis
-models_list_crude <- cal_rr_poo_cc( year_start = 2006,
-                                    year_end = 2021,
-                                    data = pooled_data_cs %>%
-                                      mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
-                                              prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
-                                    exposure = "sexual_identity_baseline",
-                                    outcome_list = outcome_list )
+pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2001,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                   anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                   stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_1 )
+
+pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2005,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                   used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_2 )
 
 # adjusted analysis
-models_list_adjusted <- cal_rr_poo_cc( year_start = 2006,
-                                       year_end = 2021,
-                                       data = pooled_data_cs %>%
-                                         mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
-                                                 prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
-                                       exposure = "sexual_identity_baseline",
-                                       outcome_list = outcome_list,
-                                       covariates = "age + sex + country_of_birth" )
+pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2001,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                      anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                      stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_1,
+                                            covariates = "age + sex + country_of_birth" )
+
+pr_models_list_adjusted_2 <- cal_pr_poo_cc( year_start = 2005,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                      used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_2,
+                                            covariates = "age + sex + country_of_birth" )
 
 
-rr_crude_cc <- extract_rr_poo_cc(
-  model_list = models_list_crude,
+pr_crude_cc_1 <- extract_pr_cc(
+  model_list = pr_models_list_crude_1,
   exposure_var = "sexual_identity_baseline" ) %>%
   mutate( model_type = "crude" )
 
-rr_adjusted_cc <- extract_rr_poo_cc(
-  model_list = models_list_adjusted,
+pr_crude_cc_2 <- extract_pr_cc(
+  model_list = pr_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_adjusted_cc_1 <- extract_pr_cc(
+  model_list = pr_models_list_adjusted_1,
   exposure_var = "sexual_identity_baseline" ) %>%
   mutate( model_type = "adjusted" )
 
-rr_poo_cc <- bind_rows( rr_crude_cc, rr_adjusted_cc )
-writexl::write_xlsx( rr_poo_cc, "results_output/results_cc/rr_poo_cs_cc.xlsx" )
+pr_adjusted_cc_2 <- extract_pr_cc(
+  model_list = pr_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_poo_cc <- bind_rows( pr_crude_cc_1, pr_crude_cc_2, pr_adjusted_cc_1, pr_adjusted_cc_2 )
+writexl::write_xlsx( pr_poo_cc, "results_output/results_cc/pr_poo_cs_cc.xlsx" )
 
 
 ########## Prevalence Difference ##########
 
-str( pooled_data_cs )
-
 # crude analysis
-models_list_crude <- cal_rd_poo_cc( year_start = 2006,
-                                    year_end = 2021,
-                                    data = pooled_data_cs %>%
-                                      mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
-                                              prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
-                                    exposure = "sexual_identity_baseline",
-                                    outcome_list = outcome_list )
+pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2001,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                   anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                   stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_1 )
+
+pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2005,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                   used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_2 )
 
 # adjusted analysis
-models_list_adjusted <- cal_rd_poo_cc( year_start = 2006,
-                                       year_end = 2021,
-                                       data = pooled_data_cs %>%
-                                         mutate( prescription_use_N06A = ifelse( prescription_use_N06A == "Yes", 1, 0 ),
-                                                 prescription_use_N05B = ifelse( prescription_use_N05B == "Yes", 1, 0 ) ),
-                                       exposure = "sexual_identity_baseline",
-                                       outcome_list = outcome_list,
-                                       covariates = "age + sex + country_of_birth" )
+pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2001,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                      anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                      stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_1,
+                                            covariates = "age + sex + country_of_birth" )
+
+pd_models_list_adjusted_2 <- cal_pd_poo_cc( year_start = 2005,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                      used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_2,
+                                            covariates = "age + sex + country_of_birth" )
 
 
-rd_crude_cc <- extract_rd_poo_cc(
-  model_list = models_list_crude,
+pd_crude_cc_1 <- extract_pd_cc(
+  model_list = pd_models_list_crude_1,
   exposure_var = "sexual_identity_baseline" ) %>%
   mutate( model_type = "crude" )
 
-rd_adjusted_cc <- extract_rd_poo_cc(
-  model_list = models_list_adjusted,
+pd_crude_cc_2 <- extract_pd_cc(
+  model_list = pd_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_adjusted_cc_1 <- extract_pd_cc(
+  model_list = pd_models_list_adjusted_1,
   exposure_var = "sexual_identity_baseline" ) %>%
   mutate( model_type = "adjusted" )
 
-rd_poo_cc <- bind_rows( rd_crude_cc, rd_adjusted_cc )
-writexl::write_xlsx( rd_poo_cc, "results_output/results_cc/rd_poo_cs_cc.xlsx" )
+pd_adjusted_cc_2 <- extract_pd_cc(
+  model_list = pd_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_poo_cc <- bind_rows( pd_crude_cc_1, pd_crude_cc_2, pd_adjusted_cc_1, pd_adjusted_cc_2 )
+writexl::write_xlsx( pd_poo_cc, "results_output/results_cc/pd_poo_cs_cc.xlsx" )
 ```
 
-### 6. Series of Cohort Analysis
-#### 6.1. Complete-case analysis
+### 5. Series of Cohort Analysis
+#### 5.1. Complete-case analysis
 ```{r}
 drug_codes <- c( "N06A", "N05B" )
 
