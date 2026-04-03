@@ -934,62 +934,6 @@ outpatient_2002_2014 %>%
     is.na( val_outpatient ),
     is.na( val_kon ) ) # 0
 
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$socialstyrelsen_outpatient ) ] )
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_outpatient ) ] ) # val_outpatient includes both specialist outpatient care during 2001-2019 and primary care during 2013-2019
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_kon ) ] ) # val_kon includes primary care data during 2003-2012
-
-# check indicator variable
-table( outpatient_2002_2014$vardniva, useNA = "always" )
-str( outpatient_2002_2014$vardniva )
-
-outpatient_2002_2014 <- outpatient_2002_2014 %>%
-  mutate( vardniva = na_if( vardniva, "" ) )
-
-outpatient_2002_2014 %>%
-  filter( vardniva == "01" ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2013-2019
-
-outpatient_2002_2014 %>%
-  filter( vardniva == "02" ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2003-2019
-
-
-missing_pattern( outpatient_2002_2014 %>%
-                   select( val_outpatient, vardniva ))
-
-outpatient_2002_2014 %>%
-  filter( is.na( vardniva ) ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2003-2019
-
-
-table( outpatient_2002_2014$diagnosis_year, outpatient_2002_2014$vardniva )
-table( outpatient_2002_2014$val_outpatient, useNA = "always" )
-
-outpatient_2002_2014 %>%
-  filter(val_outpatient == 1,
-         vardniva != "",
-         !is.na( vardniva )) %>%
-   mutate( lengths = nchar( indatuma ) ) %>%
-  count( lengths )
-  
-  
-  
-  group_by(lopnr, indatuma) %>%
-  filter(n() > 1) %>%
-  arrange(lopnr, indatuma)
-
-outpatient_2002_2014 %>%
-  filter( diagnosis_year >= 2013,
-          diagnosis_year <= 2019,
-          !is.na( val_outpatient ) ) %>%
-  count( vardniva )
-  
-
-
-
 # inpatient care
 inpatient_2002_2014 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Registers/mental_diagnoses_inpatient.dta')
 summary( inpatient_2002_2014 )
@@ -1015,7 +959,6 @@ inpatient_2002_2014 %>%
 
 setdiff( 2001:2021, inpatient_2002_2014$diagnosis_year[ !is.na( inpatient_2002_2014$socialstyrelsen_inpatient ) ] )
 setdiff( 2001:2021, inpatient_2002_2014$diagnosis_year[ !is.na( inpatient_2002_2014$val_inpatient ) ] )
-
 
 # merge data
 d_diagnosis_2002_2014 <- bind_rows( outpatient_2002_2014 %>% 
@@ -1105,7 +1048,6 @@ d_all_diagnosis_summary <- d_all_diagnosis %>%
 
 summary( d_all_diagnosis_summary )
 
-
 # plot register coverage
 coverage_df <- tibble(
   registry = c( "NPR: Inpatient care", 
@@ -1119,13 +1061,13 @@ coverage_df <- tibble(
   
   mutate(
     care_type = case_when(
-      grepl( "Inpatient", registry ) ~ "Inpatient",
-      grepl( "Specialist", registry ) ~ "Specialist outpatient",
+      grepl( "Inpatient", registry ) ~ "Inpatient care",
+      grepl( "Specialist", registry ) ~ "Specialist outpatient care",
       grepl( "Primary", registry ) ~ "Primary care",
       registry == "Prescribed Drug Register" ~ "Dispensed prescription" ),
     
     registry = factor( registry, levels = c( "Prescribed Drug Register", "NPR: Inpatient care", "VAL: Inpatient care", "NPR: Specialist outpatient care", "VAL: Specialist outpatient care", "VAL: Primary care" ) ),
-    care_type = factor( care_type, levels =  c( "Primary care", "Specialist outpatient", "Inpatient", "Dispensed prescription" ) ) )
+    care_type = factor( care_type, levels =  c( "Primary care", "Specialist outpatient care", "Inpatient care", "Dispensed prescription" ) ) )
 
 p_register_coverage <- 
   ggplot( coverage_df, aes( y = registry, color = care_type ) ) +
@@ -1147,8 +1089,8 @@ p_register_coverage <-
   
   scale_color_manual( values = c(
     "Primary care" = "#F8766D",
-    "Specialist outpatient" = "#C77CFF",
-    "Inpatient" = "#00BFC4",
+    "Specialist outpatient care" = "#C77CFF",
+    "Inpatient care" = "#00BFC4",
     "Dispensed prescription" = "#7CAE00" ) ) +
   
   labs(
@@ -1168,7 +1110,60 @@ p_register_coverage <-
 
 p_register_coverage
 ggsave( "results_output/plots_general/p_register_coverage.svg", plot = p_register_coverage, width = 12, height = 6 )
+```
 
+```{r}
+# ONGOING
+
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$socialstyrelsen_outpatient ) ] )
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_outpatient ) ] ) # val_outpatient includes both specialist outpatient care during 2001-2019 and primary care during 2013-2019
+setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_kon ) ] ) # val_kon includes primary care data during 2003-2012
+
+# check indicator variable
+table( outpatient_2002_2014$vardniva, useNA = "always" )
+class( outpatient_2002_2014$vardniva )
+
+outpatient_2002_2014 <- outpatient_2002_2014 %>%
+  mutate( vardniva = na_if( vardniva, "" ) )
+
+outpatient_2002_2014 %>%
+  filter( vardniva == "01" ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2013-2019
+
+outpatient_2002_2014 %>%
+  filter( vardniva == "02" ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2003-2019; 2001 and 2002 did not have an indicator
+
+outpatient_2002_2014 %>%
+  filter( is.na( vardniva ) ) %>%
+  distinct( diagnosis_year ) %>%
+  arrange( diagnosis_year ) # 2003-2019
+
+
+table( outpatient_2002_2014$diagnosis_year, outpatient_2002_2014$vardniva )
+table( outpatient_2002_2014$val_outpatient, useNA = "always" )
+
+outpatient_2002_2014 %>%
+  filter(val_outpatient == 1,
+         vardniva != "",
+         !is.na( vardniva )) %>%
+   mutate( lengths = nchar( indatuma ) ) %>%
+  count( lengths )
+  
+  
+  
+  group_by(lopnr, indatuma) %>%
+  filter(n() > 1) %>%
+  arrange(lopnr, indatuma)
+
+outpatient_2002_2014 %>%
+  filter( diagnosis_year >= 2013,
+          diagnosis_year <= 2019,
+          !is.na( val_outpatient ) ) %>%
+  count( vardniva )
+  
 
 # plot data sources
 diagnosis_source_summary <- d_diagnosis_2002_2014 %>%
@@ -1351,7 +1346,7 @@ print( pooled_sample_cs %>% count( sample_year ),
 
 pooled_sample_cs %>%
   filter( death_same_year == "Yes" ) %>%
-  pull( lopnr ) # five died
+  pull( lopnr ) # five died during sample year
 
 pooled_sample_cs %>%
   filter( death_same_year == "Yes" ) %>%
@@ -1651,6 +1646,8 @@ identical(
     filter( date > followup_end,
             event_type %in% c( "move-out", "death" ) ) %>%
     pull( lopnr )
+  
+  table( eligible_dates$event_type[ year( eligible_dates$date ) == 2005 ] ) # no death event
 
   included_year_ids <- union( move_in_before_year_ids, move_out_after_year_ids )
   
@@ -1684,7 +1681,8 @@ pooled_sample_cs_final <- pooled_sample_cs_final %>%
                                TRUE ~ .x ) ),
           
           across( c( depression, anxiety, stress_related ),
-                  ~ if_else( registered_year == FALSE & .x == "No", NA, .x ) ) ) %>%
+                  ~ case_when( registered_year == FALSE & .x == "No" ~ NA, 
+                               TRUE ~ .x ) ) ) %>%
   select( -c( registered_year, registered_half_2005, death ) )
 
 summary( pooled_sample_cs_final )
@@ -1989,435 +1987,117 @@ writexl::write_xlsx( pd_poo_cc, "results_output/results_cc/pd_poo_cs_cc.xlsx" )
 ```
 
 ### 5. Series of Cohort Analysis
-#### 5.1. Complete-case analysis
+#### 5.1. Construct study samples
 ```{r}
-drug_codes <- c( "N06A", "N05B" )
-
-yearly_summaries <- list()
-
-for ( drug_code in drug_codes ) {
-  
-  for ( yr in 2006:2021 ) {
-    
-    followup_start <- as.Date( paste0( yr, "-01-01" ) )
-    followup_end <- as.Date( "2021-12-31" )
-    birth_year_cutoff <- yr - 16
-
-    eligible_dates <- dates_all %>%
-      filter( birth_year <= birth_year_cutoff )
-
-    move_in_ids <- eligible_dates %>%
-      filter( date < followup_start ) %>%
-      arrange( lopnr, date ) %>%
-      group_by( lopnr ) %>%
-      slice_tail( n = 1 ) %>%
-      ungroup() %>%
-      filter( event_type == "move-in" ) %>%
-      pull( lopnr )
-
-    had_event_ids <- eligible_dates %>%
-      filter( lopnr %in% move_in_ids, 
-              date >= followup_start, 
-              date <= followup_end ) %>%
-      pull( lopnr ) %>%
-      unique()
-
-    included_year_ids <- setdiff( move_in_ids, had_event_ids )
-    
-    excluded_year_ids <- eligible_dates %>%
-      filter( !lopnr %in% included_year_ids ) %>%
-      pull( lopnr ) %>%
-      unique()
-    
-    study_sample <- d_all_selected %>%
-      filter( birth_year <= birth_year_cutoff, # 16 years or older
-              !lopnr %in% excluded_year_ids )
-    
-    # ATC data
-    atc_yearly_summary <- atc_all %>%
-      filter( year >= yr,
-              drug_class == drug_code ) %>%
-      group_by( lopnr, year ) %>%
-      summarise( prescription_count = n(),
-                 .groups = "drop" )
-    
-    all_combos <- expand.grid( lopnr = study_sample$lopnr,
+summary( pooled_sample_cs )
+all_combos <- expand.grid( lopnr = study_sample$lopnr,
                                year = year( followup_start ):year( followup_end ) )
+
+# create study samples
+yearly_sample <- list()
+
+for ( yr in 2001:2021 ) {
+  
+  followup_start <- as.Date( paste0( yr, "-01-01" ) )
+  
+  ids_with_events <- dates_all %>% 
+    filter( date >= followup_start ) %>%
+    pull( lopnr ) %>%
+    unique() # exclude those who had any events during follow-up
+  
+  ids_baseline <- dates_all %>%
+    filter( !lopnr %in% ids_with_events,
+            date < followup_start ) %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice_tail( n = 1 ) %>%
+    ungroup() %>%
+    filter( event_type %in% c( "move-out", "death" ) ) %>%
+    pull( lopnr )
+  
+  excluded_ids <- inclusion( ids_with_events, ids_baseline )
+
+  study_sample <- d_all_selected %>%
+    filter( birth_year >= yr - 29,
+            birth_year <= yr - 16,
+            !lopnr %in% excluded_ids ) %>%
+    mutate( age = yr - birth_year )
     
-    sample_atc <- all_combos %>%
-      left_join( study_sample, by = "lopnr" ) %>%
-      left_join( atc_yearly_summary, by = c( "lopnr", "year" ) ) %>%
-      mutate(
-        prescription_count = replace_na( prescription_count, 0 ),
-        prescription_use = as.factor( ifelse( prescription_count > 0, "Yes", "No" ) ),
-        age = yr - birth_year,
-        age_group = categorize_age_group( age )
-        )
-    
-    yearly_summaries[[ paste0( drug_code, "_", yr ) ]] <- sample_atc
-    }
-  }
-
-# convert to long format
-summary_long_co <- bind_rows( yearly_summaries, .id = "cohort" ) %>%
-  select( - age_2005 )
-summary( summary_long_co )
-
-N06A_co <- summary_long_co %>%
-  filter( grepl( "^N06A", cohort ) ) %>%
-  mutate( cohort_year = as.numeric( str_extract( cohort, "\\d{4}$" ) ) ) %>%
-  select( -1 ) %>%
-  rename(
-    prescription_use_N06A = prescription_use,
-    prescription_count_N06A = prescription_count
-  )
-
-N05B_co <- summary_long_co %>%
-  filter( grepl( "^N05B", cohort ) ) %>%
-  mutate( cohort_year = as.numeric( str_extract( cohort, "\\d{4}$" ) ) ) %>%
-  select( -1 ) %>%
-  rename(
-    prescription_use_N05B = prescription_use,
-    prescription_count_N05B = prescription_count
-  )
-
-pooled_data_co <- left_join(
-  N06A_co, N05B_co,
-  by = c( "cohort_year", "year", "lopnr", "sexual_identity_2010", "sexual_identity_2014", "sexual_identity_2021", "birth_year", "sex", "country_of_birth", "survey_year", "sexual_identity_baseline", "generation", "age", "age_group" ) ) %>%
-  mutate( age_sex = interaction( age_group, sex ) ) %>%
-  select( cohort_year, lopnr, year, age, age_group, sex, age_sex, birth_year, generation, country_of_birth, sexual_identity_baseline, sexual_identity_2010, sexual_identity_2014, sexual_identity_2021, survey_year, everything() ) %>%
-  filter( age >= 16, age <= 59 )
-
-summary( pooled_data_co )
-
-# random check incomplete variables
-miss_var_summary( pooled_data_co %>% filter( cohort_year == 2006 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
-miss_var_summary( pooled_data_co %>% filter( cohort_year == 2010 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
-miss_var_summary( pooled_data_co %>% filter( cohort_year == 2014 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
-miss_var_summary( pooled_data_co %>% filter( cohort_year == 2021 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
-
-sample_summary_co <- pooled_data_co %>%
-  distinct( cohort_year, lopnr, sexual_identity_baseline ) %>%
-  group_by( cohort_year, sexual_identity_baseline ) %>%
-  summarise( n = n(), .groups = "drop" ) %>%
-  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ),
-          identity_group = case_when( sexual_identity_baseline %in% c( "Heterosexual", "Missing" ) ~ "Heterosexual or Missing",
-                                      sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other" ) ~ "Sexual Minority" ) ) %>%
-  arrange( cohort_year, sexual_identity_baseline )
-
-p_sample_co <- ggplot(
-  sample_summary_co,
-  aes( x = cohort_year,
-       y = n,
-       color = sexual_identity_baseline,
-       group = sexual_identity_baseline ) ) +
-  
-  geom_line( linewidth = 0.8 ) +
-  geom_point( size = 1.2 ) +
-  
-  scale_x_continuous(
-    limits = c( 2006, 2021 ),
-    breaks = seq( 2006, 2021, 3 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
-  
-  scale_color_manual( values = c(
-    "Heterosexual" = "#F8766D",
-    "Homosexual"   = "#00BFC4",
-    "Bisexual"     = "#C77CFF",
-    "Other"        = "#7CAE00",
-    "Missing"      = "#7f7f7f" ) ) +
-  
-  labs( x =  "Year of Cohort Sample",
-        y = "Number of Participants",
-        color = NULL ) +
-  
-  facet_wrap( ~ identity_group, scales = "free_y" ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_blank(),
-    panel.spacing = unit( 1.5, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_text( family = "Arial", size = 11 ),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
-  
-  ggh4x::facetted_pos_scales( y = list(
-    identity_group == "Heterosexual or Missing" ~ scale_y_continuous( limits = c( 9000, 70000 ), breaks = c( seq( 10000, 70000, 10000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ),
-    identity_group == "Sexual Minority" ~ scale_y_continuous( limits = c( 900, 2000 ), breaks = c( seq( 1000, 2000, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
-  
-  coord_capped_cart( bottom = 'right', gap = 0 )
-
-p_sample_co
-ggsave( "results_output/plots_general/p_sample_co.svg", plot = p_sample_co, width = 11, height = 6 )
+  yearly_sample[[ as.character( yr ) ]] <- study_sample
+}
 ```
 
-##### 3.3.2. Check overlapping participants
+#### 5.2. Add follow-up data
 ```{r}
-# among all participants
-lopnr_years_all <- pooled_data_co %>%
-  select( cohort_year, lopnr ) %>%
-  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
-  mutate( value = 1 ) %>%
-  pivot_wider( names_from = cohort_year, 
-               values_from = value, 
-               values_fill = 0 ) %>%
-  as.data.frame()
+# check migration events
+yearly_sample <- list()
 
-pdf( "results_output/plots_general/p_overlap_co_upset_all.pdf", width = 11, height = 9, onefile = FALSE )
-upset(
-  data = lopnr_years_all,
-  nsets = length( colnames( lopnr_years_all )[-1] ),
-  sets = colnames( lopnr_years_all )[-1],
-  keep.order = TRUE,
-  order.by = "freq",
-  mainbar.y.label = "Intersection Size",
-  sets.x.label = "Sample Size",
-  sets.bar.color = "#A32214",
-  point.size = 2.5,
-  line.size = 1,
-  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
-  number.angles = 30
-)
-dev.off()
+for ( yr in 2001:2021 ) {
+  
+  followup_start <- as.Date( paste0( yr, "-01-01" ) )
+  followup_end <- as.Date( "2021-12-31" )
+  
+  ids_year <- pooled_sample_cs$lopnr[ pooled_sample_cs$sample_year == yr ]
+  
+  eligible_dates <- dates_all %>% filter( lopnr %in% ids_year )
+  
+  move_in_ids <- eligible_dates %>%
+    filter( date < followup_start ) %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice_tail( n = 1 ) %>%
+    ungroup() %>%
+    filter( event_type == "move-in" ) %>%
+    pull( lopnr )
 
-# among 16-29 years
-lopnr_years_1 <- pooled_data_co %>%
-  filter( age <= 29 ) %>%
-  select( cohort_year, lopnr ) %>%
-  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
-  mutate( value = 1 ) %>%
-  pivot_wider( names_from = cohort_year, 
-               values_from = value, 
-               values_fill = 0 ) %>%
-  as.data.frame()
+  had_event_ids <- eligible_dates %>%
+    filter( lopnr %in% move_in_ids, 
+            date >= followup_start, 
+            date <= followup_end ) %>%
+    pull( lopnr ) %>%
+    unique()
+  
+  move_in_before_year_ids <- setdiff( move_in_ids, had_event_ids )
+    
+  move_out_after_year_ids <- eligible_dates %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice( 1 ) %>%
+    ungroup() %>%
+    filter( date > followup_end,
+            event_type %in% c( "move-out", "death" ) ) %>%
+    pull( lopnr )
+  
+  death_ids <- pooled_sample_cs %>%
+    filter( sample_year == yr,
+            death == "Yes" ) %>%
+    pull( lopnr )
 
-pdf( "results_output/plots_general/p_overlap_co_upset_age_16_29.pdf", width = 11, height = 9, onefile = FALSE )
-upset(
-  data = lopnr_years_1,
-  nsets = length( colnames( lopnr_years_1 )[-1] ),
-  sets = colnames( lopnr_years_1 )[-1],
-  keep.order = TRUE,
-  order.by = "freq",
-  mainbar.y.label = "Intersection Size",
-  sets.x.label = "Sample Size",
-  sets.bar.color = "#A32214",
-  point.size = 2.5,
-  line.size = 1,
-  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
-  number.angles = 30
-)
-dev.off()
+  included_year_ids <- union( union( move_in_before_year_ids, move_out_after_year_ids ), 
+                              death_ids )
+  
+  excluded_year_ids <- eligible_dates %>%
+    filter( !lopnr %in% included_year_ids ) %>%
+    pull( lopnr ) %>%
+    unique()
+  
+  study_sample <- pooled_sample_cs %>%
+    filter( sample_year == yr ) %>%
+    mutate( registered_year = if_else( lopnr %in% excluded_year_ids, FALSE, TRUE ) )
+  
+  yearly_sample[[ as.character( yr ) ]] <- study_sample
+  }
 
-lopnr_years_alluvial_1 <- lopnr_years_1 %>% # prepare for alluvial plot
-  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
-  mutate( across( everything(),
-                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
-                            levels = c( "Excluded", "Included" ) ) ) 
-  ) %>%
-  count( across( everything() ) ) %>%
-  rename( number = n ) %>%
-  mutate( percent = number / sum( number ) )
-sum( lopnr_years_alluvial_1$number ) == nrow( lopnr_years_1 ) # TRUE
+pooled_sample_cs_final <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
+  mutate( sample_year = as.numeric( sample_year ) )
 
-lopnr_years_alluvial_long_1 <- to_lodes_form( lopnr_years_alluvial_1, # convert to long format
-                                              axes = 1:8,
-                                              key = "year", 
-                                              value = "inclusion_status", 
-                                              id = "cohort", 
-                                              diffuse = `2006` ) 
+summary( pooled_sample_cs_final )
+str( pooled_sample_cs_final )
 
-p_overlap_co_alluvial_1 <- 
-  ggplot( lopnr_years_alluvial_long_1,
-          aes( x = year,
-               stratum = inclusion_status, 
-               alluvium = cohort,
-               y = percent ) ) +
-  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
-  geom_stratum( aes( fill = `2006` ) ) +
-  geom_text( stat = "stratum", 
-             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
-             family = "Arial", 
-             size = 11 / .pt ) +
-  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
-                     breaks = c( "Included", "Excluded" ),
-                     na.value = NA ) +
-  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
-  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
-  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
-  theme_classic() +
-  theme( axis.text = element_text( family = "Arial", size = 11 ),
-         axis.title = element_text( family = "Arial", size = 11 ),
-         legend.title = element_blank(),
-         legend.text = element_text( family = "Arial", size = 10 ), 
-         legend.key = element_rect( colour = "white" ),
-         legend.position = "bottom",
-         axis.ticks.x.bottom = element_blank(),
-         axis.line.x.bottom = element_blank()
-  )
-
-p_overlap_co_alluvial_1
-ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_16_29.svg", plot = p_overlap_co_alluvial_1, width = 12, height = 9 )
-
-# among 30-44 years
-lopnr_years_2 <- pooled_data_co %>%
-  filter( age >= 30,
-          age <= 44 ) %>%
-  select( cohort_year, lopnr ) %>%
-  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
-  mutate( value = 1 ) %>%
-  pivot_wider( names_from = cohort_year, 
-               values_from = value, 
-               values_fill = 0 ) %>%
-  as.data.frame()
-
-pdf( "results_output/plots_general/p_overlap_co_upset_age_30_44.pdf", width = 11, height = 9, onefile = FALSE )
-upset(
-  data = lopnr_years_2,
-  nsets = length( colnames( lopnr_years_2 )[-1] ),
-  sets = colnames( lopnr_years_2 )[-1],
-  keep.order = TRUE,
-  order.by = "freq",
-  mainbar.y.label = "Intersection Size",
-  sets.x.label = "Sample Size",
-  sets.bar.color = "#A32214",
-  point.size = 2.5,
-  line.size = 1,
-  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
-  number.angles = 30
-)
-dev.off()
-
-lopnr_years_alluvial_2 <- lopnr_years_2 %>% # prepare for alluvial plot
-  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
-  mutate( across( everything(),
-                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
-                            levels = c( "Excluded", "Included" ) ) ) 
-  ) %>%
-  count( across( everything() ) ) %>%
-  rename( number = n ) %>%
-  mutate( percent = number / sum( number ) )
-sum( lopnr_years_alluvial_2$number ) == nrow( lopnr_years_2 ) # TRUE
-
-lopnr_years_alluvial_long_2 <- to_lodes_form( lopnr_years_alluvial_2, # convert to long format
-                                              axes = 1:8, 
-                                              key = "year", 
-                                              value = "inclusion_status", 
-                                              id = "cohort", 
-                                              diffuse = `2006` ) 
-
-p_overlap_co_alluvial_2 <- 
-  ggplot( lopnr_years_alluvial_long_2,
-          aes( x = year,
-               stratum = inclusion_status, 
-               alluvium = cohort,
-               y = percent ) ) +
-  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
-  geom_stratum( aes( fill = `2006` ) ) +
-  geom_text( stat = "stratum", 
-             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
-             family = "Arial", 
-             size = 11 / .pt ) +
-  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
-                     breaks = c( "Included", "Excluded" ),
-                     na.value = NA ) +
-  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
-  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
-  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
-  theme_classic() +
-  theme( axis.text = element_text( family = "Arial", size = 11 ),
-         axis.title = element_text( family = "Arial", size = 11 ),
-         legend.title = element_blank(),
-         legend.text = element_text( family = "Arial", size = 10 ), 
-         legend.key = element_rect( colour = "white" ),
-         legend.position = "bottom",
-         axis.ticks.x.bottom = element_blank(),
-         axis.line.x.bottom = element_blank()
-  )
-
-p_overlap_co_alluvial_2
-ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_30_44.svg", plot = p_overlap_co_alluvial_2, width = 12, height = 9 )
-
-# among 45-59 years
-lopnr_years_3 <- pooled_data_co %>%
-  filter( age >= 45,
-          age <= 59 ) %>%
-  select( cohort_year, lopnr ) %>%
-  distinct( cohort_year, lopnr, .keep_all = TRUE ) %>%
-  mutate( value = 1 ) %>%
-  pivot_wider( names_from = cohort_year, 
-               values_from = value, 
-               values_fill = 0 ) %>%
-  as.data.frame()
-
-pdf( "results_output/plots_general/p_overlap_co_upset_age_45_59.pdf", width = 11, height = 9, onefile = FALSE )
-upset(
-  data = lopnr_years_3,
-  nsets = length( colnames( lopnr_years_3 )[-1] ),
-  sets = colnames( lopnr_years_3 )[-1],
-  keep.order = TRUE,
-  order.by = "freq",
-  mainbar.y.label = "Intersection Size",
-  sets.x.label = "Sample Size",
-  sets.bar.color = "#A32214",
-  point.size = 2.5,
-  line.size = 1,
-  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
-  number.angles = 30
-)
-dev.off()
-
-lopnr_years_alluvial_3 <- lopnr_years_3 %>% # prepare for alluvial plot
-  select( c( seq( 2, 14, by = 2 ), 17 ) ) %>%
-  mutate( across( everything(),
-                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
-                            levels = c( "Excluded", "Included" ) ) ) 
-  ) %>%
-  count( across( everything() ) ) %>%
-  rename( number = n ) %>%
-  mutate( percent = number / sum( number ) )
-sum( lopnr_years_alluvial_3$number ) == nrow( lopnr_years_3 ) # TRUE
-
-lopnr_years_alluvial_long_3 <- to_lodes_form( lopnr_years_alluvial_3, # convert to long format
-                                              axes = 1:8,
-                                              key = "year", 
-                                              value = "inclusion_status", 
-                                              id = "cohort", 
-                                              diffuse = `2006` ) 
-
-p_overlap_co_alluvial_3 <- 
-  ggplot( lopnr_years_alluvial_long_3,
-          aes( x = year,
-               stratum = inclusion_status, 
-               alluvium = cohort,
-               y = percent ) ) +
-  geom_alluvium( aes( fill = `2006` ), curve_type = "cubic" ) +
-  geom_stratum( aes( fill = `2006` ) ) +
-  geom_text( stat = "stratum", 
-             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
-             family = "Arial", 
-             size = 11 / .pt ) +
-  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
-                     breaks = c( "Included", "Excluded" ),
-                     na.value = NA ) +
-  scale_x_discrete( expand = expansion( mult = c( 0, 0.05 ) ) ) +
-  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
-  labs( x = "Year of Cohort Sample", y = "Percentage" ) +
-  theme_classic() +
-  theme( axis.text = element_text( family = "Arial", size = 11 ),
-         axis.title = element_text( family = "Arial", size = 11 ),
-         legend.title = element_blank(),
-         legend.text = element_text( family = "Arial", size = 10 ), 
-         legend.key = element_rect( colour = "white" ),
-         legend.position = "bottom",
-         axis.ticks.x.bottom = element_blank(),
-         axis.line.x.bottom = element_blank()
-  )
-
-p_overlap_co_alluvial_3
-ggsave( "results_output/plots_general/p_overlap_co_alluvial_age_45_59.svg", plot = p_overlap_co_alluvial_3, width = 12, height = 9 )
+identical(
+  pooled_sample_cs_final %>% select( -registered_year ) %>% arrange( lopnr, sample_year ),
+  pooled_sample_cs %>% mutate( sample_year = as.numeric( sample_year ) ) %>% arrange( lopnr, sample_year )
+) # TRUE
 ```
 
 ##### 3.3.3. Complete-case analysis
