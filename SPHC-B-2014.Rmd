@@ -425,9 +425,35 @@ eligible_dates %>%
   filter( lopnr %in% excluded_year_ids,
           date <= followup_end ) %>%
   count( event_type ) # no death event by the end of 2014
+
+d_2014_complete <- d_2014_complete %>%
+  mutate( 
+    registered_year = case_when(
+      is.na( lopnr ) ~ NA,
+      lopnr %in% excluded_year_ids ~ FALSE,
+      TRUE ~ TRUE 
+    )
+  )
+table( d_2014_complete$registered_year, useNA = "always" )
+n_miss( d_2014_complete$lopnr )
 ```
 
-##### 3.2.2. Use of antidepressants and anxiolytics
+##### 3.2.2. Register diagnosis
+```{r}
+load('/Volumes/projects/LGBT Project data/Swedish Registers/d_all_diagnosis_summary.RData')
+summary( d_all_diagnosis_summary )
+
+d_diagnosis_2014 <- 
+  d_all_diagnosis_summary %>%
+  filter( lopnr %in% d_2014_complete$lopnr,
+          diagnosis_year == 2014 ) %>%
+  select( - diagnosis_year )
+
+summary( d_diagnosis_2014 )
+nrow( d_diagnosis_2014 ) == length( unique( d_diagnosis_2014$lopnr ) ) # TRUE
+```
+
+##### 3.2.3. Use of antidepressants and anxiolytics
 ```{r}
 # dispensed prescription: antidepressants (N06A) and anxiolytics (N05B)
 atc_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/atc_pdr_2002_2014.sas7bdat') %>%
@@ -457,72 +483,40 @@ atc_2014_summary_wide <- atc_2014_summary %>%
     values_fill = 0 ) %>%
   mutate(
     used_N05B = factor( if_else( count_N05B > 0, "Yes", "No" ) ),
-    used_N06A = factor( if_else( count_N06A > 0, "Yes", "No" ) ) )
+    used_N06A = factor( if_else( count_N06A > 0, "Yes", "No" ) ) ) %>%
+  select( -c( count_N06A, count_N05B ) )
 
 summary( atc_2014_summary_wide )
-
-length( intersect( atc_2014_summary_wide$lopnr, excluded_year_ids ) ) # 7 excluded participants had prescription data, so their prevalence data will be treated as observed
-
-reincluded_year_ids_N06A <- atc_2014_summary_wide %>%
-  filter( lopnr %in% excluded_year_ids,
-          used_N06A == "Yes" ) %>%
-  pull( lopnr ) # 6 had dispensed prescription of antidepressants
-
-reincluded_year_ids_N05B <- atc_2014_summary_wide %>%
-  filter( lopnr %in% excluded_year_ids,
-          used_N05B == "Yes" ) %>%
-  pull( lopnr ) # 2 had dispensed prescription of anxiolytics
 ```
 
 #### 3.3. Construct study sample
 ```{r}
-d_2014_complete <- d_2014_complete %>%
+d_2014_complete_final <- d_2014_complete %>%
   left_join( atc_2014_summary_wide, by = "lopnr" ) %>%
+  left_join( d_diagnosis_2014, by = "lopnr" ) %>%
   mutate(
-    count_N05B = if_else( !is.na( lopnr ) & is.na( count_N05B ), 0, count_N05B ),
-    count_N06A = if_else( !is.na( lopnr ) & is.na( count_N06A ), 0, count_N06A ),
-    used_N05B = factor( if_else( !is.na( lopnr ) & is.na( used_N05B ), "No", used_N05B ) ),
-    used_N06A = factor( if_else( !is.na( lopnr ) & is.na( used_N06A ), "No", used_N06A ) )
-    ) # assume complete follow-up in 2014
-
-summary( d_2014_complete )
-
-d_2014_complete <- d_2014_complete %>%
-  mutate( 
-    used_N06A = if_else(
-      !is.na( lopnr ) & lopnr %in% setdiff( excluded_year_ids, reincluded_year_ids_N06A ),
-      NA,
-      used_N06A
+    across(
+      c( used_N05B, used_N06A, depression, anxiety, stress_related ),
+      ~ if_else( !is.na( lopnr ) & is.na( .x ), "No", as.character( .x ) )
     ),
     
-    used_N05B = if_else(
-      !is.na( lopnr ) & lopnr %in% setdiff( excluded_year_ids, reincluded_year_ids_N05B ),
-      NA,
-      used_N05B
-    ),
-    
-    count_N06A = if_else(
-      !is.na( lopnr ) & lopnr %in% excluded_year_ids,
-      NA,
-      count_N06A
-    ),
-    
-    count_N05B = if_else(
-      !is.na( lopnr ) & lopnr %in% excluded_year_ids,
-      NA,
-      count_N05B
-      ),
-    
-    followup_2014 = as.factor( 
-      if_else( is.na( lopnr ), NA_character_,
-               if_else( lopnr %in% excluded_year_ids, "No", "Yes" ) ) 
-      )
+    across(
+      c( used_N05B, used_N06A, depression, anxiety, stress_related ),
+      as.factor
     )
+  ) # assume complete follow-up in 2014
 
-summary( d_2014_complete )
+summary( d_2014_complete_final )
+
+# introduce missing data
+d_2014_complete_final <- d_2014_complete_final %>%
+  mutate( across( c( used_N05B, used_N06A, depression, anxiety, stress_related ),
+                  ~ case_when( registered_year == FALSE & .x == "No" ~ NA, 
+                               TRUE ~ .x ) ) )
+summary( d_2014_complete_final )
 
 miss_var_summary(
-  d_2014_complete %>%
+  d_2014_complete_final %>%
     filter( !is.na( lopnr ) ) ) %>%
   filter( n_miss > 0 ) %>%
   print( n = Inf )
@@ -533,6 +527,9 @@ miss_var_summary(
 variables_list <- list(
   list( variable = "used_N06A", condition = "Yes", name = "antidepressant" ),
   list( variable = "used_N05B", condition = "Yes", name = "anxiolytic" ),
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ),
   list( variable = "psychological_distress", condition = "Yes", name = "psychological_distress" ),
   list( variable = "suicidal_thoughts", condition = "Yes", name = "suicidal_thoughts" ),
   list( variable = "suicide_attempts", condition = "Yes", name = "suicide_attempts" )
@@ -545,7 +542,7 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2014_complete )
+                               data = d_2014_complete_final )
 
 # overall prevalence
 overall_list <- cal_prev_indi_overall_cc( variables_list = variables_list,
@@ -600,33 +597,22 @@ results_list_by_sex )
 
 writexl::write_xlsx( prevalence_2014_by_sex, "results_output/results_cc/prevalence_2014_by_sex_cc.xlsx" )
 
-# by generation
-results_list_by_generation <- cal_prev_indi_cc( variables_list = variables_list,
-                                                design = subset( survey_design_cc, age <= 29 ),
-                                                year = 2014,
-                                                group_var = "sexual_identity_2014 + generation",
-                                                subgroup = TRUE )
-
-prevalence_2014_by_generation <- Reduce( function( x, y ){
-  merge( x, y, by = c( "sexual_identity_2014", "generation" ) )
-}, 
-results_list_by_generation )
-
-writexl::write_xlsx( prevalence_2014_by_generation, "results_output/results_cc/prevalence_2014_by_generation_cc.xlsx" )
-
 
 ########## Prevalence Ratio ##########
 
-str( d_2014_complete )
+str( d_2014_complete_final )
 
 # create survey design
 survey_design_cc <- svydesign( ids = ~ 1, 
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2014_complete %>%
+                               data = d_2014_complete_final %>%
                                  mutate( used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
                                          used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
@@ -660,7 +646,7 @@ pr_2014_cc <- bind_rows( pr_crude_cc, pr_adjusted_cc )
 writexl::write_xlsx( pr_2014_cc, "results_output/results_cc/pr_2014_cc.xlsx" )
 
 # crude analysis (MALE)
-levels( d_2014_complete$sex )
+levels( d_2014_complete_final$sex )
 
 models_list_male_crude <- cal_pr_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
@@ -700,10 +686,13 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2014_complete %>%
+                               data = d_2014_complete_final %>%
                                  mutate( sex = factor( sex, levels = c( "Female", "Male" ) ),
                                          used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
                                          used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
@@ -744,16 +733,19 @@ writexl::write_xlsx( pr_female_2014_cc, "results_output/results_cc/pr_female_201
 
 ########## Prevalence Difference ##########
 
-str( d_2014_complete )
+str( d_2014_complete_final )
 
 # create survey design
 survey_design_cc <- svydesign( ids = ~ 1, 
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2014_complete %>%
+                               data = d_2014_complete_final %>%
                                  mutate( used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
                                          used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
@@ -787,7 +779,7 @@ pd_2014_cc <- bind_rows( pd_crude_cc, pd_adjusted_cc )
 writexl::write_xlsx( pd_2014_cc, "results_output/results_cc/pd_2014_cc.xlsx" )
 
 # crude analysis (MALE)
-levels( d_2014_complete$sex )
+levels( d_2014_complete_final$sex )
 
 models_list_male_crude <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
@@ -827,10 +819,13 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2014_complete %>%
+                               data = d_2014_complete_final %>%
                                  mutate( sex = factor( sex, levels = c( "Female", "Male" ) ),
                                          used_N05B = ifelse( used_N05B == "Yes", 1, 0 ),
                                          used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )

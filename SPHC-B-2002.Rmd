@@ -372,13 +372,128 @@ d_2002_complete$suicide_attempts <- factor(
 table( d_2002_complete$suicide_attempts, useNA = "always" )
 ```
 
+#### 3.2. Registry-based
+##### 3.2.1. Check migration events
+```{r}
+load('/Volumes/projects/LGBT Project data/Swedish Registers/dates_all.RData') # cleaned migration data
+summary( dates_all )
+
+eligible_dates <- dates_all %>%
+  filter( lopnr %in% d_2002_complete$lopnr )
+summary( eligible_dates )
+length( unique( eligible_dates$lopnr ) )
+
+followup_start <- as.Date( "2002-01-01" )
+followup_end <- as.Date( "2002-12-31" )
+
+move_in_ids <- eligible_dates %>%
+  filter( date < followup_start ) %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  slice_tail( n = 1 ) %>%
+  ungroup() %>%
+  filter( event_type == "move-in" ) %>%
+  pull( lopnr )
+
+had_event_ids <- eligible_dates %>%
+  filter( lopnr %in% move_in_ids, 
+          date >= followup_start, 
+          date <= followup_end ) %>%
+  pull( lopnr ) %>%
+  unique()
+
+move_in_before_year_ids <- setdiff( move_in_ids, had_event_ids )
+
+move_out_after_year_ids <- eligible_dates %>%
+  arrange( lopnr, date ) %>%
+  group_by( lopnr ) %>%
+  slice( 1 ) %>%
+  ungroup() %>%
+  filter( date > followup_end,
+          event_type %in% c( "move-out", "death" ) ) %>%
+  pull( lopnr )
+
+included_year_ids <- union( move_in_before_year_ids, move_out_after_year_ids ) # among those who had any migration event
+
+excluded_year_ids <- eligible_dates %>%
+  filter( !lopnr %in% included_year_ids ) %>%
+  pull( lopnr ) %>%
+  unique() # identify participants who were not continuously registered in 2002
+
+eligible_dates %>%
+  filter( lopnr %in% excluded_year_ids,
+          date <= followup_end ) %>%
+  count( event_type ) # no death event by the end of 2002
+
+d_2002_complete <- d_2002_complete %>%
+  mutate( 
+    registered_year = case_when(
+      is.na( lopnr ) ~ NA,
+      lopnr %in% excluded_year_ids ~ FALSE,
+      TRUE ~ TRUE 
+    )
+  )
+table( d_2002_complete$registered_year, useNA = "always" )
+n_miss( d_2002_complete$lopnr )
+```
+
+##### 3.2.2. Register diagnosis
+```{r}
+load('/Volumes/projects/LGBT Project data/Swedish Registers/d_all_diagnosis_summary.RData')
+summary( d_all_diagnosis_summary )
+
+d_diagnosis_2002 <- 
+  d_all_diagnosis_summary %>%
+  filter( lopnr %in% d_2002_complete$lopnr,
+          diagnosis_year == 2002 ) %>%
+  select( - diagnosis_year )
+
+summary( d_diagnosis_2002 )
+nrow( d_diagnosis_2002 ) == length( unique( d_diagnosis_2002$lopnr ) ) # TRUE
+```
+
+#### 3.3. Construct study sample
+```{r}
+d_2002_complete_final <- d_2002_complete %>%
+  left_join( d_diagnosis_2002, by = "lopnr" ) %>%
+  mutate(
+    across(
+      c( depression, anxiety, stress_related ),
+      ~ if_else( !is.na( lopnr ) & is.na( .x ), "No", as.character( .x ) )
+    ),
+    
+    across(
+      c( depression, anxiety, stress_related ),
+      as.factor
+    )
+  ) # assume complete follow-up in 2002
+
+summary( d_2002_complete_final )
+
+# introduce missing data
+d_2002_complete_final <- d_2002_complete_final %>%
+  mutate( across( c( depression, anxiety, stress_related ),
+                  ~ case_when( registered_year == FALSE & .x == "No" ~ NA, 
+                               TRUE ~ .x ) ) )
+summary( d_2002_complete_final )
+
+miss_var_summary(
+  d_2002_complete_final %>%
+    filter( !is.na( lopnr ) ) ) %>%
+  filter( n_miss > 0 ) %>%
+  print( n = Inf )
+```
+
 ### 4. Complete-Case Analysis
 ```{r}
 variables_list <- list(
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ),
   list( variable = "psychological_distress", condition = "Yes", name = "psychological_distress" ),
   list( variable = "suicidal_thoughts", condition = "Yes", name = "suicidal_thoughts" ),
-  list( variable = "suicide_attempts", condition = "Yes", name = "suicide_attempts" ) )
-
+  list( variable = "suicide_attempts", condition = "Yes", name = "suicide_attempts" )
+)
 
 ########## Prevalence ##########
 
@@ -387,7 +502,7 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2002_complete )
+                               data = d_2002_complete_final )
 
 # overall prevalence
 overall_list <- cal_prev_indi_overall_cc( variables_list = variables_list,
@@ -408,8 +523,8 @@ results_list <- cal_prev_indi_cc( variables_list = variables_list,
 
 overall_prevalence_2002_by_sex <- Reduce( function( x, y ){
   merge( x, y, by = "sex" )
-  }, 
-  results_list ) %>%
+}, 
+results_list ) %>%
   mutate( sexual_identity = "Stockholm County" ) %>%
   relocate( sexual_identity )
 
@@ -423,8 +538,8 @@ results_list <- cal_prev_indi_cc( variables_list = variables_list,
 
 prevalence_2002 <- Reduce( function( x, y ){
   merge( x, y, by = "sexual_identity_2010" )
-  }, 
-  results_list )
+}, 
+results_list )
 
 writexl::write_xlsx( prevalence_2002, "results_output/results_cc/prevalence_2002_by_identity_cc.xlsx" )
 
@@ -437,37 +552,26 @@ results_list_by_sex <- cal_prev_indi_cc( variables_list = variables_list,
 
 prevalence_2002_by_sex <- Reduce( function( x, y ){
   merge( x, y, by = c( "sexual_identity_2010", "sex" ) )
-  },
-  results_list_by_sex )
+},
+results_list_by_sex )
 
 writexl::write_xlsx( prevalence_2002_by_sex, "results_output/results_cc/prevalence_2002_by_sex_cc.xlsx" )
-
-# by generation
-results_list_by_generation <- cal_prev_indi_cc( variables_list = variables_list,
-                                                design = subset( survey_design_cc, age <= 29 ),
-                                                year = 2002,
-                                                group_var = "sexual_identity_2010 + generation",
-                                                subgroup = TRUE )
-
-prevalence_2002_by_generation <- Reduce( function( x, y ){
-  merge( x, y, by = c( "sexual_identity_2010", "generation" ) )
-  }, 
-  results_list_by_generation )
-
-writexl::write_xlsx( prevalence_2002_by_generation, "results_output/results_cc/prevalence_2002_by_generation_cc.xlsx" )
 
 
 ########## Prevalence Ratio ##########
 
-str( d_2002_complete )
+str( d_2002_complete_final )
 
 # create survey design
 survey_design_cc <- svydesign( ids = ~ 1, 
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2002_complete %>%
-                                 mutate( psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
+                               data = d_2002_complete_final %>%
+                                 mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
+                                         psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
 
@@ -500,7 +604,7 @@ pr_2002_cc <- bind_rows( pr_crude_cc, pr_adjusted_cc )
 writexl::write_xlsx( pr_2002_cc, "results_output/results_cc/pr_2002_cc.xlsx" )
 
 # crude analysis (MALE)
-levels( d_2002_complete$sex )
+levels( d_2002_complete_final$sex )
 
 models_list_male_crude <- cal_pr_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
@@ -540,8 +644,11 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2002_complete %>%
+                               data = d_2002_complete_final %>%
                                  mutate( sex = factor( sex, levels = c( "Female", "Male" ) ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
@@ -582,26 +689,29 @@ writexl::write_xlsx( pr_female_2002_cc, "results_output/results_cc/pr_female_200
 
 ########## Prevalence Difference ##########
 
-str( d_2002_complete )
+str( d_2002_complete_final )
 
 # create survey design
 survey_design_cc <- svydesign( ids = ~ 1, 
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2002_complete %>%
-                                 mutate( psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
+                               data = d_2002_complete_final %>%
+                                 mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
+                                         psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
 
-# crude analysis
+# crude analysis (overall)
 models_list_crude <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
   outcome_list = variables_list,
   year = 2002 )
 
-# adjusted analysis
+# adjusted analysis (overall)
 models_list_adjusted <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
   exposure = "sexual_identity_2010", 
@@ -623,7 +733,7 @@ pd_2002_cc <- bind_rows( pd_crude_cc, pd_adjusted_cc )
 writexl::write_xlsx( pd_2002_cc, "results_output/results_cc/pd_2002_cc.xlsx" )
 
 # crude analysis (MALE)
-levels( d_2002_complete$sex )
+levels( d_2002_complete_final$sex )
 
 models_list_male_crude <- cal_pd_indi_cc( 
   design = subset( survey_design_cc, age <= 29 ), 
@@ -663,8 +773,11 @@ survey_design_cc <- svydesign( ids = ~ 1,
                                strata = ~ sampling_strata_region,
                                weights = ~ design_weight,
                                fpc = ~ no.of.population,
-                               data = d_2002_complete %>%
+                               data = d_2002_complete_final %>%
                                  mutate( sex = factor( sex, levels = c( "Female", "Male" ) ),
+                                         depression = ifelse( depression == "Yes", 1, 0 ),
+                                         anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                         stress_related = ifelse( stress_related == "Yes", 1, 0 ),
                                          psychological_distress = ifelse( psychological_distress == "Yes", 1, 0 ),
                                          suicidal_thoughts = ifelse( suicidal_thoughts == "Yes", 1, 0 ),
                                          suicide_attempts = ifelse( suicide_attempts == "Yes", 1, 0 ) ) )
