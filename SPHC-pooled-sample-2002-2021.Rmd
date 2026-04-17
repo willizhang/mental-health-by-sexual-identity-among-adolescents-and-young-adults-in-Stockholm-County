@@ -855,6 +855,7 @@ p_registry_dates <-
 
 p_registry_dates
 ggsave( "results_output/plots_general/registry_dates.svg", plot = p_registry_dates, width = 15, height = 12 )
+ggsave( "results_output/plots_general/registry_dates.png", plot = p_registry_dates, width = 15, height = 12 )
 
 # age at death
 p_death_age_year <- 
@@ -892,6 +893,7 @@ ggsave( "results_output/plots_general/age_at_death.svg", plot = p_death_age_year
 
 ### 3. Register-Based Outcomes
 #### 3.1. Register diagnosis
+##### 3.1.1. Prepare datasets
 ```{r}
 ##### SPHC 2002 to 2014 #####
 
@@ -1112,148 +1114,465 @@ p_register_coverage
 ggsave( "results_output/plots_general/p_register_coverage.svg", plot = p_register_coverage, width = 12, height = 6 )
 ```
 
+##### 3.1.2. Register sources for depression
 ```{r}
-# ONGOING
-
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$socialstyrelsen_outpatient ) ] )
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_outpatient ) ] ) # val_outpatient includes both specialist outpatient care during 2001-2019 and primary care during 2013-2019
-setdiff( 2001:2021, outpatient_2002_2014$diagnosis_year[ !is.na( outpatient_2002_2014$val_kon ) ] ) # val_kon includes primary care data during 2003-2012
-
-# check indicator variable
 table( outpatient_2002_2014$vardniva, useNA = "always" )
 class( outpatient_2002_2014$vardniva )
 
 outpatient_2002_2014 <- outpatient_2002_2014 %>%
   mutate( vardniva = na_if( vardniva, "" ) )
 
-outpatient_2002_2014 %>%
-  filter( vardniva == "01" ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2013-2019
+table( outpatient_2002_2014$val_outpatient,
+       outpatient_2002_2014$vardniva,
+       useNA = "always" ) # 757 diagnoses had missing source
 
 outpatient_2002_2014 %>%
-  filter( vardniva == "02" ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2003-2019; 2001 and 2002 did not have an indicator
+  filter( !is.na( val_outpatient ) ) %>%
+  count( diagnosis_year, val_outpatient, vardniva ) %>%
+  print( n = Inf )
+
+# check primary care and specialist outpatient care data
+outpatient_2002_2014 %>%
+  filter( val_kon == 1 ) %>%
+  pull( diagnosis_year ) %>%
+  unique() %>%
+  sort() # 2003-2012
 
 outpatient_2002_2014 %>%
-  filter( is.na( vardniva ) ) %>%
-  distinct( diagnosis_year ) %>%
-  arrange( diagnosis_year ) # 2003-2019
-
-
-table( outpatient_2002_2014$diagnosis_year, outpatient_2002_2014$vardniva )
-table( outpatient_2002_2014$val_outpatient, useNA = "always" )
+  filter( vardniva == "01" ) %>% # primary care
+  pull( diagnosis_year ) %>%
+  unique() %>%
+  sort() # 2013-2019
 
 outpatient_2002_2014 %>%
-  filter(val_outpatient == 1,
-         vardniva != "",
-         !is.na( vardniva )) %>%
-   mutate( lengths = nchar( indatuma ) ) %>%
-  count( lengths )
-  
-  
-  
-  group_by(lopnr, indatuma) %>%
-  filter(n() > 1) %>%
-  arrange(lopnr, indatuma)
+  filter( vardniva == "02" ) %>% # outpatient specialist care
+  pull( diagnosis_year ) %>%
+  unique() %>%
+  sort() # 2003-2019
 
 outpatient_2002_2014 %>%
-  filter( diagnosis_year >= 2013,
-          diagnosis_year <= 2019,
-          !is.na( val_outpatient ) ) %>%
-  count( vardniva )
-  
+  filter( val_outpatient == 1,
+          is.na( vardniva ) ) %>%
+  mutate( period = if_else( diagnosis_year < 2013, "Before 2013", "2013 and after" ) ) %>%
+  count( period )
 
-# plot data sources
-diagnosis_source_summary <- d_diagnosis_2002_2014 %>%
-  
-  filter( diagnosis_year >= 2003, 
-          diagnosis_year <= 2019 ) %>%
-  
+# merge data
+colnames( outpatient_2002_2014 )
+colnames( outpatient_2021 )
+colnames( inpatient_2002_2014 )
+colnames( inpatient_2021 )
+
+d_diagnosis_source <- bind_rows(
+  outpatient_2002_2014 %>% mutate( dataset = "outpatient_2002_2014" ),
+  inpatient_2002_2014 %>% mutate( dataset = "inpatient_2002_2014" ),
+  outpatient_2021 %>% mutate( dataset = "outpatient_2021" ),
+  inpatient_2021 %>% mutate( dataset = "inpatient_2021" ) 
+  ) %>%
+  select( - indatuma )
+
+summary( d_diagnosis_source )
+
+d_depression_source <- d_diagnosis_source %>%
+  filter( depression == 1 ) %>%
+  select( -c( anxiety, stress_related, dataset ) ) %>%
+  relocate( diagnosis_year, .after = 1 ) %>%
+  mutate( unspecified_outpatient = if_else( val_outpatient == 1 & is.na( vardniva ), 1, NA ) )
+
+summary( d_depression_source )
+
+d_depression_source %>%
+  count( lopnr, name = "n_diagnoses" ) %>%
+  summarise(
+    mean = mean( n_diagnoses ),
+    median = median( n_diagnoses ),
+    min = min( n_diagnoses ),
+    max = max( n_diagnoses ),
+    n_less_5 = sum( n_diagnoses < 5 ),
+    prop_less_5 = mean( n_diagnoses < 5 ) * 100
+    ) # number of diagnoses/visits; note that this includes duplicate diagnoses from different registers
+
+table( d_depression_source$val_outpatient,
+       d_depression_source$vardniva,
+       useNA = "always" ) # 112 diagnoses had missing source
+table( d_depression_source$unspecified_outpatient, useNA = "always" )
+
+d_depression_source %>%
+  filter(
+    is.na( socialstyrelsen_outpatient ),
+    is.na( vardniva ),
+    is.na( unspecified_outpatient ), 
+    is.na( val_kon ),
+    is.na( socialstyrelsen_inpatient ),
+    is.na( val_inpatient ) ) # 0
+
+str( d_depression_source )
+
+d_depression_source_summary <- d_depression_source %>%
+  group_by( lopnr, diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = any( socialstyrelsen_outpatient == 1, na.rm = TRUE ),
+    npr_inpatient = any( socialstyrelsen_inpatient == 1, na.rm = TRUE ),
+    val_primary = any( val_kon == 1, na.rm = TRUE ) | any( vardniva == "01", na.rm = TRUE ),
+    val_outpatient_spec = any( vardniva == "02", na.rm = TRUE ),
+    val_inpatient = any( val_inpatient == 1, na.rm = TRUE ),
+    unspecified_outpatient = any( unspecified_outpatient == 1, na.rm = TRUE ),
+    .groups = "drop"
+  )
+
+summary( d_depression_source_summary )
+
+d_depression_source_year <- d_depression_source_summary %>%
+  group_by( diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = sum( npr_outpatient_spec ),
+    npr_inpatient = sum( npr_inpatient ),
+    val_primary = sum( val_primary ),
+    val_outpatient_spec = sum( val_outpatient_spec ),
+    val_inpatient = sum ( val_inpatient ),
+    unspecified_outpatient = sum( unspecified_outpatient ),
+    .groups = "drop"
+  )
+
+d_depression_source_year_long <- d_depression_source_year %>%
   pivot_longer(
-    cols = c( depression, anxiety, stress_related ),
-    names_to = "outcome",
-    values_to = "value" ) %>%
-  
-  filter( value == 1 ) %>%
-  
-  # reshape ALL sources (outpatient + inpatient)
-  pivot_longer(
-    cols = c(
-      socialstyrelsen_outpatient,
-      socialstyrelsen_inpatient,
-      val_outpatient,
-      val_inpatient,
-      val_kon
-    ),
+    cols = - diagnosis_year,
     names_to = "source",
-    values_to = "has_record"
-  ) %>%
-  
-  # keep only present sources
-  filter(!is.na(has_record)) %>%
-  
-  # harmonise source labels
-  mutate(
-    source = case_when(
-      source %in% c("socialstyrelsen_outpatient", "socialstyrelsen_inpatient") ~ "NPR",
-      source %in% c("val_outpatient", "val_inpatient") ~ "VAL",
-      source == "val_kon" ~ "VAL primary"
-    ),
-    
-    outcome = recode(outcome,
-                     depression = "Depression",
-                     anxiety = "Anxiety Disorders",
-                     stress_related = "Stress-Related Disorders"
-    )
-  ) %>%
-  
-  distinct(lopnr, diagnosis_year, outcome, source) %>%
-  
-  # count individuals (not visits)
-  count(diagnosis_year, outcome, source) %>%
-  
-  group_by(diagnosis_year, outcome) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup()
+    values_to = "n"
+    ) %>%
+  group_by( diagnosis_year ) %>%
+  mutate( prop = n / sum( n ),
+          source = recode( source, 
+                           npr_outpatient_spec = "NPR Outpatient Specialist",
+                           npr_inpatient = "NPR Inpatient",
+                           val_primary = "VAL Primary Care",
+                           val_outpatient_spec = "VAL Outpatient Specialist",
+                           val_inpatient = "VAL Inpatient",
+                           unspecified_outpatient = "Unspecified Outpatient"
+                           ) )
 
-p_source <- ggplot(
-  diagnosis_source_summary,
-  aes(x = diagnosis_year, y = prop, fill = source)
-) +
+p_source_depression <- ggplot( 
+  d_depression_source_year_long,
+  aes( x = diagnosis_year, y = prop, fill = source ) ) +
   
-  geom_area(alpha = 0.8) +
-  
-  facet_wrap(~ outcome, ncol = 1) +
-  
-  scale_y_continuous(labels = scales::percent_format()) +
+  geom_area( alpha = 0.8 ) +
   
   scale_x_continuous(
-    breaks = seq(2003, 2019, 4),
-    expand = expansion(mult = c(0.02, 0.02))
-  ) +
+    limits = c( 2001, 2021 ),
+    breaks = seq( 2001, 2021, 4 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
   
-  scale_fill_manual(values = c(
-    "NPR" = "#F8766D",
-    "VAL" = "#00BFC4",
-    "VAL primary" = "#7CAE00"
-  )) +
+  scale_y_continuous(
+    breaks = seq( 0, 1, 0.25 ),
+    labels = scales::percent_format(),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_fill_manual(
+    values = c(
+      "VAL Primary Care" = "#7570b3",
+      "VAL Outpatient Specialist" = "#e7298a",
+      "VAL Inpatient" = "#66a61e",
+      "NPR Outpatient Specialist" = "#1b9e77",
+      "NPR Inpatient" = "#d95f02",
+      "Unspecified Outpatient" = "#e6ab02"
+      ),
+    breaks = c(
+      "VAL Primary Care",
+      "NPR Outpatient Specialist",
+      "VAL Outpatient Specialist",
+      "NPR Inpatient",
+      "VAL Inpatient",
+      "Unspecified Outpatient"
+      )
+    ) +
   
   labs(
     x = "Year",
-    y = "Proportion of Diagnoses",
-    fill = "Data Source"
+    y = "Distribution of Diagnosis Sources for Depression",
+    fill = NULL
+    ) +
+  
+  theme_classic() +
+  theme(
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = "both", bottom = 'both' )
+
+p_source_depression
+ggsave( "results_output/plots_general/p_source_depression.svg", plot = p_source_depression, width = 11, height = 7 )
+```
+
+##### 3.1.3. Register sources for anxiety disorders
+```{r}
+d_anxiety_source <- d_diagnosis_source %>%
+  filter( anxiety == 1 ) %>%
+  select( -c( depression, stress_related, dataset ) ) %>%
+  relocate( diagnosis_year, .after = 1 ) %>%
+  mutate( unspecified_outpatient = if_else( val_outpatient == 1 & is.na( vardniva ), 1, NA ) )
+
+summary( d_anxiety_source )
+
+d_anxiety_source %>%
+  count( lopnr, name = "n_diagnoses" ) %>%
+  summarise(
+    mean = mean( n_diagnoses ),
+    median = median( n_diagnoses ),
+    min = min( n_diagnoses ),
+    max = max( n_diagnoses ),
+    n_less_5 = sum( n_diagnoses < 5 ),
+    prop_less_5 = mean( n_diagnoses < 5 ) * 100
+  ) # number of diagnoses/visits; note that this includes duplicate diagnoses from different registers
+
+table( d_anxiety_source$val_outpatient,
+       d_anxiety_source$vardniva,
+       useNA = "always" ) # 160 diagnoses had missing source
+table( d_anxiety_source$unspecified_outpatient, useNA = "always" )
+
+d_anxiety_source %>%
+  filter(
+    is.na( socialstyrelsen_outpatient ),
+    is.na( vardniva ),
+    is.na( unspecified_outpatient ), 
+    is.na( val_kon ),
+    is.na( socialstyrelsen_inpatient ),
+    is.na( val_inpatient ) ) # 0
+
+str( d_anxiety_source )
+
+d_anxiety_source_summary <- d_anxiety_source %>%
+  group_by( lopnr, diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = any( socialstyrelsen_outpatient == 1, na.rm = TRUE ),
+    npr_inpatient = any( socialstyrelsen_inpatient == 1, na.rm = TRUE ),
+    val_primary = any( val_kon == 1, na.rm = TRUE ) | any( vardniva == "01", na.rm = TRUE ),
+    val_outpatient_spec = any( vardniva == "02", na.rm = TRUE ),
+    val_inpatient = any( val_inpatient == 1, na.rm = TRUE ),
+    unspecified_outpatient = any( unspecified_outpatient == 1, na.rm = TRUE ),
+    .groups = "drop"
+  )
+
+summary( d_anxiety_source_summary )
+
+d_anxiety_source_year <- d_anxiety_source_summary %>%
+  group_by( diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = sum( npr_outpatient_spec ),
+    npr_inpatient = sum( npr_inpatient ),
+    val_primary = sum( val_primary ),
+    val_outpatient_spec = sum( val_outpatient_spec ),
+    val_inpatient = sum ( val_inpatient ),
+    unspecified_outpatient = sum( unspecified_outpatient ),
+    .groups = "drop"
+  )
+
+d_anxiety_source_year_long <- d_anxiety_source_year %>%
+  pivot_longer(
+    cols = - diagnosis_year,
+    names_to = "source",
+    values_to = "n"
+  ) %>%
+  group_by( diagnosis_year ) %>%
+  mutate( prop = n / sum( n ),
+          source = recode( source, 
+                           npr_outpatient_spec = "NPR Outpatient Specialist",
+                           npr_inpatient = "NPR Inpatient",
+                           val_primary = "VAL Primary Care",
+                           val_outpatient_spec = "VAL Outpatient Specialist",
+                           val_inpatient = "VAL Inpatient",
+                           unspecified_outpatient = "Unspecified Outpatient"
+          ) )
+
+p_source_anxiety <- ggplot( 
+  d_anxiety_source_year_long,
+  aes( x = diagnosis_year, y = prop, fill = source ) ) +
+  
+  geom_area( alpha = 0.8 ) +
+  
+  scale_x_continuous(
+    limits = c( 2001, 2021 ),
+    breaks = seq( 2001, 2021, 4 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_y_continuous(
+    breaks = seq( 0, 1, 0.25 ),
+    labels = scales::percent_format(),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_fill_manual(
+    values = c(
+      "VAL Primary Care" = "#7570b3",
+      "VAL Outpatient Specialist" = "#e7298a",
+      "VAL Inpatient" = "#66a61e",
+      "NPR Outpatient Specialist" = "#1b9e77",
+      "NPR Inpatient" = "#d95f02",
+      "Unspecified Outpatient" = "#e6ab02"
+    ),
+    breaks = c(
+      "VAL Primary Care",
+      "NPR Outpatient Specialist",
+      "VAL Outpatient Specialist",
+      "NPR Inpatient",
+      "VAL Inpatient",
+      "Unspecified Outpatient"
+    )
+  ) +
+  
+  labs(
+    x = "Year",
+    y = "Distribution of Diagnosis Sources for Anxiety Disorders",
+    fill = NULL
   ) +
   
   theme_classic() +
   theme(
-    strip.background = element_blank(),
-    strip.text = element_text(size = 11),
-    legend.position = "bottom"
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = "both", bottom = 'both' )
+
+p_source_anxiety
+ggsave( "results_output/plots_general/p_source_anxiety.svg", plot = p_source_anxiety, width = 11, height = 7 )
+```
+
+##### 3.1.4. Register sources for stress-related disorders
+```{r}
+d_stress_source <- d_diagnosis_source %>%
+  filter( stress_related == 1 ) %>%
+  select( -c( depression, anxiety, dataset ) ) %>%
+  relocate( diagnosis_year, .after = 1 ) %>%
+  mutate( unspecified_outpatient = if_else( val_outpatient == 1 & is.na( vardniva ), 1, NA ) )
+
+summary( d_stress_source )
+
+d_stress_source %>%
+  count( lopnr, name = "n_diagnoses" ) %>%
+  summarise(
+    mean = mean( n_diagnoses ),
+    median = median( n_diagnoses ),
+    min = min( n_diagnoses ),
+    max = max( n_diagnoses ),
+    n_less_5 = sum( n_diagnoses < 5 ),
+    prop_less_5 = mean( n_diagnoses < 5 ) * 100
+  ) # number of diagnoses/visits; note that this includes duplicate diagnoses from different registers
+
+table( d_stress_source$val_outpatient,
+       d_stress_source$vardniva,
+       useNA = "always" ) # 489 diagnoses had missing source
+table( d_stress_source$unspecified_outpatient, useNA = "always" )
+
+d_stress_source %>%
+  filter(
+    is.na( socialstyrelsen_outpatient ),
+    is.na( vardniva ),
+    is.na( unspecified_outpatient ), 
+    is.na( val_kon ),
+    is.na( socialstyrelsen_inpatient ),
+    is.na( val_inpatient ) ) # 0
+
+str( d_stress_source )
+
+d_stress_source_summary <- d_stress_source %>%
+  group_by( lopnr, diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = any( socialstyrelsen_outpatient == 1, na.rm = TRUE ),
+    npr_inpatient = any( socialstyrelsen_inpatient == 1, na.rm = TRUE ),
+    val_primary = any( val_kon == 1, na.rm = TRUE ) | any( vardniva == "01", na.rm = TRUE ),
+    val_outpatient_spec = any( vardniva == "02", na.rm = TRUE ),
+    val_inpatient = any( val_inpatient == 1, na.rm = TRUE ),
+    unspecified_outpatient = any( unspecified_outpatient == 1, na.rm = TRUE ),
+    .groups = "drop"
   )
 
-p_source
+summary( d_stress_source_summary )
+
+d_stress_source_year <- d_stress_source_summary %>%
+  group_by( diagnosis_year ) %>%
+  summarise(
+    npr_outpatient_spec = sum( npr_outpatient_spec ),
+    npr_inpatient = sum( npr_inpatient ),
+    val_primary = sum( val_primary ),
+    val_outpatient_spec = sum( val_outpatient_spec ),
+    val_inpatient = sum ( val_inpatient ),
+    unspecified_outpatient = sum( unspecified_outpatient ),
+    .groups = "drop"
+  )
+
+d_stress_source_year_long <- d_stress_source_year %>%
+  pivot_longer(
+    cols = - diagnosis_year,
+    names_to = "source",
+    values_to = "n"
+  ) %>%
+  group_by( diagnosis_year ) %>%
+  mutate( prop = n / sum( n ),
+          source = recode( source, 
+                           npr_outpatient_spec = "NPR Outpatient Specialist",
+                           npr_inpatient = "NPR Inpatient",
+                           val_primary = "VAL Primary Care",
+                           val_outpatient_spec = "VAL Outpatient Specialist",
+                           val_inpatient = "VAL Inpatient",
+                           unspecified_outpatient = "Unspecified Outpatient"
+          ) )
+
+p_source_stress <- ggplot( 
+  d_stress_source_year_long,
+  aes( x = diagnosis_year, y = prop, fill = source ) ) +
+  
+  geom_area( alpha = 0.8 ) +
+  
+  scale_x_continuous(
+    limits = c( 2001, 2021 ),
+    breaks = seq( 2001, 2021, 4 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_y_continuous(
+    breaks = seq( 0, 1, 0.25 ),
+    labels = scales::percent_format(),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_fill_manual(
+    values = c(
+      "VAL Primary Care" = "#7570b3",
+      "VAL Outpatient Specialist" = "#e7298a",
+      "VAL Inpatient" = "#66a61e",
+      "NPR Outpatient Specialist" = "#1b9e77",
+      "NPR Inpatient" = "#d95f02",
+      "Unspecified Outpatient" = "#e6ab02"
+    ),
+    breaks = c(
+      "VAL Primary Care",
+      "NPR Outpatient Specialist",
+      "VAL Outpatient Specialist",
+      "NPR Inpatient",
+      "VAL Inpatient",
+      "Unspecified Outpatient"
+    )
+  ) +
+  
+  labs(
+    x = "Year",
+    y = "Distribution of Diagnosis Sources for Stress-Related Disorders",
+    fill = NULL
+  ) +
+  
+  theme_classic() +
+  theme(
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = "both", bottom = 'both' )
+
+p_source_stress
+ggsave( "results_output/plots_general/p_source_stress.svg", plot = p_source_stress, width = 11, height = 7 )
 ```
 
 #### 3.2. Use of antidepressants and anxiolytics
