@@ -1112,10 +1112,9 @@ p_register_coverage <-
 
 p_register_coverage
 ggsave( "results_output/plots_general/p_register_coverage.svg", plot = p_register_coverage, width = 12, height = 6 )
-```
 
-##### 3.1.2. Register sources for depression
-```{r}
+
+# prepare for diagnosis source visualization
 table( outpatient_2002_2014$vardniva, useNA = "always" )
 class( outpatient_2002_2014$vardniva )
 
@@ -1171,7 +1170,10 @@ d_diagnosis_source <- bind_rows(
   select( - indatuma )
 
 summary( d_diagnosis_source )
+```
 
+##### 3.1.2. Register sources for depression
+```{r}
 d_depression_source <- d_diagnosis_source %>%
   filter( depression == 1 ) %>%
   select( -c( anxiety, stress_related, dataset ) ) %>%
@@ -1259,7 +1261,7 @@ p_source_depression <- ggplot(
   scale_x_continuous(
     limits = c( 2001, 2021 ),
     breaks = seq( 2001, 2021, 4 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+    expand = expansion( mult = c( 0.05, 0 ) ) ) +
   
   scale_y_continuous(
     breaks = seq( 0, 1, 0.25 ),
@@ -1277,10 +1279,10 @@ p_source_depression <- ggplot(
       ),
     breaks = c(
       "VAL Primary Care",
-      "NPR Outpatient Specialist",
       "VAL Outpatient Specialist",
-      "NPR Inpatient",
       "VAL Inpatient",
+      "NPR Outpatient Specialist",
+      "NPR Inpatient",
       "Unspecified Outpatient"
       )
     ) +
@@ -1297,12 +1299,12 @@ p_source_depression <- ggplot(
     axis.text = element_text( family = "Arial", size = 11 ),
     legend.title = element_text( family = "Arial", size = 11 ),
     legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
+    legend.position = "right" ) +
   
   coord_capped_cart( left = "both", bottom = 'both' )
 
 p_source_depression
-ggsave( "results_output/plots_general/p_source_depression.svg", plot = p_source_depression, width = 11, height = 7 )
+ggsave( "results_output/plots_general/p_source_depression.svg", plot = p_source_depression, width = 12, height = 7 )
 ```
 
 ##### 3.1.3. Register sources for anxiety disorders
@@ -1394,7 +1396,7 @@ p_source_anxiety <- ggplot(
   scale_x_continuous(
     limits = c( 2001, 2021 ),
     breaks = seq( 2001, 2021, 4 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+    expand = expansion( mult = c( 0.05, 0 ) ) ) +
   
   scale_y_continuous(
     breaks = seq( 0, 1, 0.25 ),
@@ -1412,10 +1414,10 @@ p_source_anxiety <- ggplot(
     ),
     breaks = c(
       "VAL Primary Care",
-      "NPR Outpatient Specialist",
       "VAL Outpatient Specialist",
-      "NPR Inpatient",
       "VAL Inpatient",
+      "NPR Outpatient Specialist",
+      "NPR Inpatient",
       "Unspecified Outpatient"
     )
   ) +
@@ -1432,12 +1434,12 @@ p_source_anxiety <- ggplot(
     axis.text = element_text( family = "Arial", size = 11 ),
     legend.title = element_text( family = "Arial", size = 11 ),
     legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
+    legend.position = "right" ) +
   
   coord_capped_cart( left = "both", bottom = 'both' )
 
 p_source_anxiety
-ggsave( "results_output/plots_general/p_source_anxiety.svg", plot = p_source_anxiety, width = 11, height = 7 )
+ggsave( "results_output/plots_general/p_source_anxiety.svg", plot = p_source_anxiety, width = 12, height = 7 )
 ```
 
 ##### 3.1.4. Register sources for stress-related disorders
@@ -1529,7 +1531,7 @@ p_source_stress <- ggplot(
   scale_x_continuous(
     limits = c( 2001, 2021 ),
     breaks = seq( 2001, 2021, 4 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+    expand = expansion( mult = c( 0.05, 0 ) ) ) +
   
   scale_y_continuous(
     breaks = seq( 0, 1, 0.25 ),
@@ -1547,10 +1549,10 @@ p_source_stress <- ggplot(
     ),
     breaks = c(
       "VAL Primary Care",
-      "NPR Outpatient Specialist",
       "VAL Outpatient Specialist",
-      "NPR Inpatient",
       "VAL Inpatient",
+      "NPR Outpatient Specialist",
+      "NPR Inpatient",
       "Unspecified Outpatient"
     )
   ) +
@@ -1567,12 +1569,12 @@ p_source_stress <- ggplot(
     axis.text = element_text( family = "Arial", size = 11 ),
     legend.title = element_text( family = "Arial", size = 11 ),
     legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
+    legend.position = "right" ) +
   
   coord_capped_cart( left = "both", bottom = 'both' )
 
 p_source_stress
-ggsave( "results_output/plots_general/p_source_stress.svg", plot = p_source_stress, width = 11, height = 7 )
+ggsave( "results_output/plots_general/p_source_stress.svg", plot = p_source_stress, width = 12, height = 7 )
 ```
 
 #### 3.2. Use of antidepressants and anxiolytics
@@ -2308,46 +2310,28 @@ writexl::write_xlsx( pd_poo_cc, "results_output/results_cc/pd_poo_cs_cc.xlsx" )
 ### 5. Series of Cohort Analysis
 #### 5.1. Construct study samples
 ```{r}
-summary( pooled_sample_cs )
-all_combos <- expand.grid( lopnr = study_sample$lopnr,
-                               year = year( followup_start ):year( followup_end ) )
-
 # create study samples
 yearly_sample <- list()
 
 for ( yr in 2001:2021 ) {
   
   followup_start <- as.Date( paste0( yr, "-01-01" ) )
-  
-  ids_with_events <- dates_all %>% 
-    filter( date >= followup_start ) %>%
-    pull( lopnr ) %>%
-    unique() # exclude those who had any events during follow-up
-  
-  ids_baseline <- dates_all %>%
-    filter( !lopnr %in% ids_with_events,
-            date < followup_start ) %>%
-    arrange( lopnr, date ) %>%
-    group_by( lopnr ) %>%
-    slice_tail( n = 1 ) %>%
-    ungroup() %>%
-    filter( event_type %in% c( "move-out", "death" ) ) %>%
-    pull( lopnr )
-  
-  excluded_ids <- inclusion( ids_with_events, ids_baseline )
 
-  study_sample <- d_all_selected %>%
+  study_sample <- d_all_selected_death %>%
     filter( birth_year >= yr - 29,
             birth_year <= yr - 16,
-            !lopnr %in% excluded_ids ) %>%
+            is.na( death_date ) ) %>%
     mutate( age = yr - birth_year )
     
   yearly_sample[[ as.character( yr ) ]] <- study_sample
 }
-```
 
-#### 5.2. Add follow-up data
-```{r}
+pooled_sample_co <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
+  mutate( sample_year = as.integer( sample_year ) ) %>%
+  select( sample_year, lopnr, sex, age, country_of_birth, sexual_identity_baseline, survey_year )
+
+summary( pooled_sample_co )
+
 # check migration events
 yearly_sample <- list()
 
@@ -2356,7 +2340,62 @@ for ( yr in 2001:2021 ) {
   followup_start <- as.Date( paste0( yr, "-01-01" ) )
   followup_end <- as.Date( "2021-12-31" )
   
-  ids_year <- pooled_sample_cs$lopnr[ pooled_sample_cs$sample_year == yr ]
+  ids_year <- pooled_sample_co$lopnr[ pooled_sample_co$sample_year == yr ]
+  
+  eligible_dates <- dates_all %>% filter( lopnr %in% ids_year )
+  
+  move_in_ids <- eligible_dates %>%
+    filter( date < followup_start ) %>%
+    arrange( lopnr, date ) %>%
+    group_by( lopnr ) %>%
+    slice_tail( n = 1 ) %>%
+    ungroup() %>%
+    filter( event_type == "move-in" ) %>%
+    pull( lopnr )
+
+  had_event_ids <- eligible_dates %>%
+    filter( lopnr %in% move_in_ids, 
+            date >= followup_start, 
+            date <= followup_end ) %>%
+    pull( lopnr ) %>%
+    unique()
+  
+  included_year_ids <- setdiff( move_in_ids, had_event_ids )
+  
+  excluded_year_ids <- eligible_dates %>%
+    filter( !lopnr %in% included_year_ids ) %>%
+    pull( lopnr ) %>%
+    unique()
+  
+  study_sample <- pooled_sample_co %>%
+    filter( sample_year == yr,
+            !lopnr %in% excluded_year_ids )
+  
+  yearly_sample[[ as.character( yr ) ]] <- study_sample
+  }
+
+pooled_sample_co_final <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
+  mutate( sample_year = as.numeric( sample_year ) )
+
+summary( pooled_sample_cs_final )
+str( pooled_sample_cs_final )
+
+identical(
+  pooled_sample_cs_final %>% select( -registered_year ) %>% arrange( lopnr, sample_year ),
+  pooled_sample_cs %>% mutate( sample_year = as.numeric( sample_year ) ) %>% arrange( lopnr, sample_year )
+) # TRUE
+
+n_distinct( pooled_sample_co$lopnr ) # total sample size = 38,628
+print( pooled_sample_co %>% count( sample_year ),
+       n = Inf )
+
+# prescription data only have a half year of coverage in 2005
+# check register status during this period
+{  
+  followup_start <- as.Date( "2005-07-01" )
+  followup_end <- as.Date( "2005-12-31" )
+  
+  ids_year <- pooled_sample_cs$lopnr[ pooled_sample_cs$sample_year == 2005 ]
   
   eligible_dates <- dates_all %>% filter( lopnr %in% ids_year )
   
@@ -2387,128 +2426,510 @@ for ( yr in 2001:2021 ) {
             event_type %in% c( "move-out", "death" ) ) %>%
     pull( lopnr )
   
-  death_ids <- pooled_sample_cs %>%
-    filter( sample_year == yr,
-            death == "Yes" ) %>%
-    pull( lopnr )
+  table( eligible_dates$event_type[ year( eligible_dates$date ) == 2005 ] ) # no death event
 
-  included_year_ids <- union( union( move_in_before_year_ids, move_out_after_year_ids ), 
-                              death_ids )
+  included_year_ids <- union( move_in_before_year_ids, move_out_after_year_ids )
   
   excluded_year_ids <- eligible_dates %>%
     filter( !lopnr %in% included_year_ids ) %>%
     pull( lopnr ) %>%
     unique()
-  
-  study_sample <- pooled_sample_cs %>%
-    filter( sample_year == yr ) %>%
-    mutate( registered_year = if_else( lopnr %in% excluded_year_ids, FALSE, TRUE ) )
-  
-  yearly_sample[[ as.character( yr ) ]] <- study_sample
-  }
+}
 
-pooled_sample_cs_final <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
-  mutate( sample_year = as.numeric( sample_year ) )
+pooled_sample_cs_final <- pooled_sample_cs_final %>%
+  mutate(
+    registered_half_2005 = case_when(
+      sample_year != 2005 ~ NA,
+      lopnr %in% excluded_year_ids ~ FALSE,
+      TRUE ~ TRUE ) )
+
+table( pooled_sample_cs_final$registered_half_2005, useNA = "always" )
+pooled_sample_cs_final %>%
+  filter( sample_year != 2005 ) %>%
+  count( registered_half_2005 )
+
+pooled_sample_cs_final %>%
+  filter( sample_year == 2005 ) %>%
+  count( registered_year, registered_half_2005 )
+
+# introduce missing data
+pooled_sample_cs_final <- pooled_sample_cs_final %>%
+  mutate( across( c( used_N05B, used_N06A ),
+                  ~ case_when( sample_year == 2005 & registered_half_2005 == FALSE & .x == "No" ~ NA,
+                               sample_year >= 2006 & registered_year == FALSE & .x == "No" ~ NA,
+                               TRUE ~ .x ) ),
+          
+          across( c( depression, anxiety, stress_related ),
+                  ~ case_when( registered_year == FALSE & .x == "No" ~ NA, 
+                               TRUE ~ .x ) ) ) %>%
+  select( -c( registered_year, registered_half_2005, death ) )
 
 summary( pooled_sample_cs_final )
-str( pooled_sample_cs_final )
 
-identical(
-  pooled_sample_cs_final %>% select( -registered_year ) %>% arrange( lopnr, sample_year ),
-  pooled_sample_cs %>% mutate( sample_year = as.numeric( sample_year ) ) %>% arrange( lopnr, sample_year )
-) # TRUE
+# random check incomplete variables
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2002 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2006 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2010 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2014 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+miss_var_summary( pooled_sample_cs_final %>% filter( sample_year == 2021 ) ) %>% filter( n_miss > 0 ) %>% print( n = Inf )
+
+# check missing pattern
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2006 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2010 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2014 ) )
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2021 ) )
+
+# plot missing variables
+missing_summary_cs <- pooled_sample_cs_final %>%
+  select( sample_year, sexual_identity_baseline, used_N05B, used_N06A, depression, anxiety, stress_related ) %>%
+  group_by( sample_year ) %>%
+  summarise( across( everything(),
+                     ~ mean( is.na( .x ) ),
+                     .names = "{.col}" ) ) %>%
+  pivot_longer( cols = - sample_year,
+                names_to = "variable",
+                values_to = "percent_missing" ) %>%
+  mutate( variable = factor( variable, 
+                             levels = c( "sexual_identity_baseline", "depression", "anxiety", "stress_related", "used_N06A", "used_N05B" ) ) )
+
+p_missing_cs <- ggplot( 
+  missing_summary_cs %>%
+    filter( !( sample_year < 2005 & variable %in% c( "used_N05B", "used_N06A" ) ) ),
+  aes( x = sample_year, y = percent_missing ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  labs(
+    x = "Cross-Sectional Sample Year",
+    y = "Percentage of Missingness" ) +
+  
+  facet_wrap( ~ variable,
+              ncol = 3,
+              axes = "all",
+              scales = "free",
+              labeller = labeller( variable = c(
+                depression = "Depression",
+                anxiety = "Anxiety Disorders",
+                stress_related = "Stress-Related Disorders",
+                used_N05B = "Anxiolytic Use",
+                used_N06A = "Antidepressant Use",
+                sexual_identity_baseline = "Sexual Identity" ) ) ) +
+  
+  ggh4x::facetted_pos_scales( 
+    x = list(
+      variable %in% c( "sexual_identity_baseline", "depression", "anxiety", "stress_related" ) ~
+        scale_x_continuous( breaks = seq( 2001, 2021, 4 ),
+                            limits = c( 2001, 2021 ),
+                            expand = expansion( mult = c( 0.08, 0.02 ) ) ),
+      
+      variable %in% c( "used_N05B", "used_N06A" ) ~
+        scale_x_continuous( breaks = seq( 2005, 2021, 4 ),
+                            limits = c( 2005, 2021 ),
+                            expand = expansion( mult = c( 0.08, 0.02 ) ) ) ),
+    
+    y = list(
+      variable == "sexual_identity_baseline" ~ 
+        scale_y_continuous( limits = c( 0, 0.2 ),
+                            breaks = c( seq( 0, 0.2, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "depression" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "anxiety" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+      
+      variable == "stress_related" ~ 
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+      variable == "used_N06A" ~ 
+        scale_y_continuous( limits = c( 0, 0.1 ),
+                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ),
+    
+      variable == "used_N05B" ~ 
+        scale_y_continuous( limits = c( 0, 0.1 ),
+                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_missing_cs
+ggsave( "results_output/plots_general/p_missing_cs.svg", plot = p_missing_cs, width = 14, height = 9 )
 ```
 
-##### 3.3.3. Complete-case analysis
+#### 5.2. Plot samples
 ```{r}
-outcome_list <- list(
-  list( variable = "prescription_use_N06A", condition = "Yes", name = "antidepressant_use" ),
-  list( variable = "prescription_use_N05B", condition = "Yes", name = "anxiolytic_use" )
+plot_sample_co <- pooled_sample_co %>%
+  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ) ) %>%
+  group_by( sample_year, sexual_identity_baseline ) %>%
+  summarise( n = n(), .groups = "drop" ) %>%
+  mutate( identity_group = case_when( 
+            sexual_identity_baseline %in% c( "Heterosexual" ) ~ "Heterosexual",
+            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other", "Missing" ) ~ "Sexual Minority or Missing" ) ) %>%
+  arrange( identity_group, n )
+
+# plot sample size by year
+p_pooled_sample_co <- ggplot(
+  plot_sample_co,
+  aes( x = sample_year,
+       y = n,
+       color = sexual_identity_baseline,
+       group = sexual_identity_baseline ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_x_continuous(
+    limits = c( 2001, 2021 ),
+    breaks = seq( 2001, 2021, 4 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  scale_color_manual( values = c(
+    "Heterosexual" = "#F8766D",
+    "Homosexual"   = "#00BFC4",
+    "Bisexual"     = "#C77CFF",
+    "Other"        = "#7CAE00",
+    "Missing"      = "#7f7f7f" ) ) +
+  
+  labs( x = "Cross-Sectional Sample Year",
+        y = "Number of Participants",
+        color = NULL ) +
+  
+  facet_wrap( ~ identity_group, scales = "free_y" ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    panel.spacing = unit( 1.5, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_text( family = "Arial", size = 11 ),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    identity_group == "Heterosexual" ~ scale_y_continuous( limits = c( 4000, 22000 ), breaks = c( seq( 4000, 22000, 2000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ),
+    identity_group == "Sexual Minority or Missing" ~ scale_y_continuous( limits = c( 0, 4500 ), breaks = c( seq( 0, 4500, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
+  
+  coord_capped_cart( left = "top", bottom = 'right', gap = 0 )
+
+p_pooled_sample_co
+ggsave( "results_output/plots_general/p_pooled_sample_co.svg", plot = p_pooled_sample_co, width = 11, height = 6 )
+
+# check overlapping participants
+lopnr_years <- pooled_sample_cs %>%
+  select( lopnr, sample_year ) %>%
+  mutate( value = 1 ) %>%
+  pivot_wider( names_from = sample_year, 
+               values_from = value, 
+               values_fill = 0 ) %>%
+  as.data.frame()
+
+pdf( "results_output/plots_general/p_overlap_upset_cs.pdf", width = 11, height = 9, onefile = FALSE ) # upset plot
+upset(
+  data = lopnr_years,
+  nsets = length( colnames( lopnr_years )[-1] ),
+  sets = colnames( lopnr_years )[-1],
+  keep.order = TRUE,
+  order.by = "freq",
+  mainbar.y.label = "Intersection Size",
+  sets.x.label = "Sample Size",
+  sets.bar.color = "#A32214",
+  point.size = 2.5,
+  line.size = 1,
+  text.scale = c( 1.3, 1.3, 1.3, 1.3, 1.3, 1 ),
+  number.angles = 30
   )
+dev.off()
+
+lopnr_years_alluvial <- lopnr_years %>% # prepare for alluvial plot
+  select( c( seq( 2, 22, by = 2 ) ) ) %>%
+  mutate( across( everything(),
+                  ~ factor( ifelse( .x == 1, "Included", "Excluded" ),
+                            levels = c( "Excluded", "Included" ) ) ) 
+          ) %>%
+  count( across( everything() ) ) %>%
+  rename( number = n ) %>%
+  mutate( percent = number / sum( number ) )
+
+sum( lopnr_years_alluvial$number ) == nrow( lopnr_years ) # TRUE
+sum( lopnr_years_alluvial$percent )
+
+lopnr_years_alluvial_long <- to_lodes_form( lopnr_years_alluvial, # convert to long format
+                                            axes = 1:11, 
+                                            key = "year", 
+                                            value = "inclusion_status", 
+                                            id = "cohort", 
+                                            diffuse = `2011` ) 
+
+p_overlap_alluvial_cs <- 
+  ggplot( lopnr_years_alluvial_long,
+          aes( x = year,
+               stratum = inclusion_status, 
+               alluvium = cohort,
+               y = percent ) ) +
+  geom_alluvium( aes( fill = `2011` ), curve_type = "cubic" ) +
+  geom_stratum( aes( fill = `2011` ) ) +
+  geom_text( stat = "stratum", 
+             aes( label = ifelse( after_stat( stratum ) == "Included", "Incl.", "Excl." ) ), 
+             family = "Arial", 
+             size = 11 / .pt ) +
+  scale_fill_manual( values = c( "#00BFC4", "#F8766D" ),
+                     breaks = c( "Included", "Excluded" ),
+                     na.value = NA ) +
+  scale_x_discrete( expand = expansion( mult = c( 0, 0.02 ) ) ) +
+  scale_y_continuous( labels = scales::percent, breaks = c( 0, 0.25, 0.5, 0.75, 1 ) ) +
+  labs( x = "Cross-Sectional Sample Year", y = "Percentage" ) +
+  theme_classic() +
+  theme( axis.text = element_text( family = "Arial", size = 11 ),
+         axis.title = element_text( family = "Arial", size = 11 ),
+         legend.title = element_blank(),
+         legend.text = element_text( family = "Arial", size = 10 ), 
+         legend.key = element_rect( colour = "white" ),
+         legend.position = "bottom",
+         axis.ticks.x.bottom = element_blank(),
+         axis.line.x.bottom = element_blank()
+         )
+
+p_overlap_alluvial_cs
+ggsave( "results_output/plots_general/p_overlap_alluvial_cs.svg", plot = p_overlap_alluvial_cs, width = 14, height = 8 )
+```
+
+#### 5.3. Add outcomes
+```{r}
+pooled_sample_cs <- pooled_sample_cs %>%
+  left_join( atc_all_summary, by = c( "sample_year" = "year", "lopnr" ) ) %>%
+  left_join( d_all_diagnosis_summary, by = c( "sample_year" = "diagnosis_year", "lopnr" ) ) %>%
+  mutate(
+    # assuming absence of outcome when no records; migration data was later used to determine missing outcome data
+    across( c( used_N05B, used_N06A ),
+            ~ if_else( sample_year >= 2005 & is.na( .x ), "No", .x ) ),
+    across( c( depression, anxiety, stress_related ),
+            ~ replace_na( .x, "No" ) ),
+    
+    used_N05B = factor( used_N05B, levels = c( "Yes", "No" ) ),
+    used_N06A = factor( used_N06A, levels = c( "Yes", "No" ) ) 
+    ) %>%
+  arrange( lopnr, sample_year )
+
+summary( pooled_sample_cs )
+
+# sanity check
+summary(
+  pooled_sample_cs %>%
+    filter( sample_year < 2005 ) )
+
+summary(
+  pooled_sample_cs %>%
+    filter( sample_year >= 2005 ) )
+```
+
+
+#### 5.5. Complete-case analysis
+```{r}
+outcome_list_1 <- list(
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ) )
+
+outcome_list_2 <- list(
+  list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
+
 
 ########## Prevalence ##########
 
 # by sexual identity
-results_list <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline" )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
+results_list_1 <- cal_prev_poo_cc( year_start = 2001, 
+                                   year_end = 2021,
+                                   data = pooled_sample_cs_final,
+                                   variables_list = outcome_list_1,
+                                   group_var = "sexual_identity_baseline" )
 
-prevalence_poo <- bind_rows( results_list )
-writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_co_cc.xlsx" )
+results_list_2 <- cal_prev_poo_cc( year_start = 2005, 
+                                   year_end = 2021,
+                                   data = pooled_sample_cs_final,
+                                   variables_list = outcome_list_2,
+                                   group_var = "sexual_identity_baseline" )
+
+prevalence_poo <- bind_rows( bind_rows( results_list_1 ), 
+                             bind_rows( results_list_2 ) )
+writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_cs_cc.xlsx" )
 
 # by sex
-results_list_by_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + sex",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
+results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2001, 
+                                          year_end = 2021,
+                                          data = pooled_sample_cs_final,
+                                          variables_list = outcome_list_1,
+                                          group_var = "sexual_identity_baseline + sex",
+                                          subgroup = TRUE )
 
-prevalence_poo_by_sex <- bind_rows( results_list_by_sex )
-writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" )
+results_list_by_sex_2 <- cal_prev_poo_cc( year_start = 2005, 
+                                          year_end = 2021,
+                                          data = pooled_sample_cs_final,
+                                          variables_list = outcome_list_2,
+                                          group_var = "sexual_identity_baseline + sex",
+                                          subgroup = TRUE )
 
-# by age
-results_list_by_age <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + age_group",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
+prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
+                                    bind_rows( results_list_by_sex_2 ) )
+writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_cs_by_sex_cc.xlsx" )
 
-prevalence_poo_by_age <- bind_rows( results_list_by_age )
-writexl::write_xlsx( prevalence_poo_by_age, "results_output/results_cc/prevalence_poo_co_by_age_cc.xlsx" )
 
-# by age and sex
-results_list_by_age_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + age_sex",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
+########## Prevalence Ratio ##########
 
-prevalence_poo_by_age_sex <- bind_rows( results_list_by_age_sex )
-writexl::write_xlsx( prevalence_poo_by_age_sex, "results_output/results_cc/prevalence_poo_co_by_age_sex_cc.xlsx" )
+str( pooled_sample_cs_final )
 
-# by generation
-results_list_by_generation <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + generation",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
+# crude analysis
+pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2001,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                   anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                   stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_1 )
 
-prevalence_poo_by_generation <- bind_rows( results_list_by_generation )
-writexl::write_xlsx( prevalence_poo_by_generation, "results_output/results_cc/prevalence_poo_co_by_generation_cc.xlsx" )
+pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2005,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                   used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2001,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                      anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                      stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_1,
+                                            covariates = "age + sex + country_of_birth" )
+
+pr_models_list_adjusted_2 <- cal_pr_poo_cc( year_start = 2005,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                      used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_2,
+                                            covariates = "age + sex + country_of_birth" )
+
+
+pr_crude_cc_1 <- extract_pr_cc(
+  model_list = pr_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_crude_cc_2 <- extract_pr_cc(
+  model_list = pr_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_adjusted_cc_1 <- extract_pr_cc(
+  model_list = pr_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_adjusted_cc_2 <- extract_pr_cc(
+  model_list = pr_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_poo_cc <- bind_rows( pr_crude_cc_1, pr_crude_cc_2, pr_adjusted_cc_1, pr_adjusted_cc_2 )
+writexl::write_xlsx( pr_poo_cc, "results_output/results_cc/pr_poo_cs_cc.xlsx" )
+
+
+########## Prevalence Difference ##########
+
+# crude analysis
+pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2001,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                   anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                   stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_1 )
+
+pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2005,
+                                         year_end = 2021,
+                                         data = pooled_sample_cs_final %>%
+                                           mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                   used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         exposure = "sexual_identity_baseline",
+                                         outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2001,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+                                                      anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+                                                      stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_1,
+                                            covariates = "age + sex + country_of_birth" )
+
+pd_models_list_adjusted_2 <- cal_pd_poo_cc( year_start = 2005,
+                                            year_end = 2021,
+                                            data = pooled_sample_cs_final %>%
+                                              mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+                                                      used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            exposure = "sexual_identity_baseline",
+                                            outcome_list = outcome_list_2,
+                                            covariates = "age + sex + country_of_birth" )
+
+
+pd_crude_cc_1 <- extract_pd_cc(
+  model_list = pd_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_crude_cc_2 <- extract_pd_cc(
+  model_list = pd_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_adjusted_cc_1 <- extract_pd_cc(
+  model_list = pd_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_adjusted_cc_2 <- extract_pd_cc(
+  model_list = pd_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_poo_cc <- bind_rows( pd_crude_cc_1, pd_crude_cc_2, pd_adjusted_cc_1, pd_adjusted_cc_2 )
+writexl::write_xlsx( pd_poo_cc, "results_output/results_cc/pd_poo_cs_cc.xlsx" )
 ```
