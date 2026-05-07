@@ -2142,12 +2142,14 @@ outcome_list_2 <- list(
 results_list_1 <- cal_prev_poo_cc( year_start = 2001, 
                                    year_end = 2021,
                                    data = pooled_sample_cs_final,
+                                   year_var = "sample_year",
                                    variables_list = outcome_list_1,
                                    group_var = "sexual_identity_baseline" )
 
 results_list_2 <- cal_prev_poo_cc( year_start = 2005, 
                                    year_end = 2021,
                                    data = pooled_sample_cs_final,
+                                   year_var = "sample_year",
                                    variables_list = outcome_list_2,
                                    group_var = "sexual_identity_baseline" )
 
@@ -2159,6 +2161,7 @@ writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_c
 results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2001, 
                                           year_end = 2021,
                                           data = pooled_sample_cs_final,
+                                          year_var = "sample_year",
                                           variables_list = outcome_list_1,
                                           group_var = "sexual_identity_baseline + sex",
                                           subgroup = TRUE )
@@ -2166,6 +2169,7 @@ results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2001,
 results_list_by_sex_2 <- cal_prev_poo_cc( year_start = 2005, 
                                           year_end = 2021,
                                           data = pooled_sample_cs_final,
+                                          year_var = "sample_year",
                                           variables_list = outcome_list_2,
                                           group_var = "sexual_identity_baseline + sex",
                                           subgroup = TRUE )
@@ -2186,6 +2190,7 @@ pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2001,
                                            mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                    anxiety = ifelse( anxiety == "Yes", 1, 0 ),
                                                    stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         year_var = "sample_year",
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_1 )
 
@@ -2194,6 +2199,7 @@ pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2005,
                                          data = pooled_sample_cs_final %>%
                                            mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
                                                    used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         year_var = "sample_year",
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_2 )
 
@@ -2204,6 +2210,7 @@ pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2001,
                                               mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                       anxiety = ifelse( anxiety == "Yes", 1, 0 ),
                                                       stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            year_var = "sample_year",
                                             exposure = "sexual_identity_baseline",
                                             outcome_list = outcome_list_1,
                                             covariates = "age + sex + country_of_birth" )
@@ -2213,6 +2220,7 @@ pr_models_list_adjusted_2 <- cal_pr_poo_cc( year_start = 2005,
                                             data = pooled_sample_cs_final %>%
                                               mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
                                                       used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            year_var = "sample_year",
                                             exposure = "sexual_identity_baseline",
                                             outcome_list = outcome_list_2,
                                             covariates = "age + sex + country_of_birth" )
@@ -2251,6 +2259,7 @@ pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2001,
                                            mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                    anxiety = ifelse( anxiety == "Yes", 1, 0 ),
                                                    stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                         year_var = "sample_year",
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_1 )
 
@@ -2259,6 +2268,7 @@ pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2005,
                                          data = pooled_sample_cs_final %>%
                                            mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
                                                    used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                         year_var = "sample_year",
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_2 )
 
@@ -2269,6 +2279,7 @@ pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2001,
                                               mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                       anxiety = ifelse( anxiety == "Yes", 1, 0 ),
                                                       stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+                                            year_var = "sample_year",
                                             exposure = "sexual_identity_baseline",
                                             outcome_list = outcome_list_1,
                                             covariates = "age + sex + country_of_birth" )
@@ -2278,6 +2289,7 @@ pd_models_list_adjusted_2 <- cal_pd_poo_cc( year_start = 2005,
                                             data = pooled_sample_cs_final %>%
                                               mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
                                                       used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+                                            year_var = "sample_year",
                                             exposure = "sexual_identity_baseline",
                                             outcome_list = outcome_list_2,
                                             covariates = "age + sex + country_of_birth" )
@@ -2567,7 +2579,7 @@ pooled_sample_co_long <- pooled_sample_co_long %>%
     used_N05B = factor( used_N05B, levels = c( "Yes", "No" ) ),
     used_N06A = factor( used_N06A, levels = c( "Yes", "No" ) ) 
     ) %>%
-  arrange( lopnr, year )
+  arrange( lopnr, cohort_year )
 
 summary( pooled_sample_co_long )
 
@@ -2600,6 +2612,7 @@ results_list_1 <- lapply( 2001:2021, function( coh_year ) {
   results <- cal_prev_poo_cc( year_start = coh_year,
                               year_end = 2021,
                               data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
                               variables_list = outcome_list_1,
                               group_var = "sexual_identity_baseline" )
   
@@ -2607,11 +2620,12 @@ results_list_1 <- lapply( 2001:2021, function( coh_year ) {
   }
   )
 
-results_list_2 <- lapply( 2005:2021, function( coh_year ) {
+results_list_2 <- lapply( 2001:2021, function( coh_year ) {
   
-  results <- cal_prev_poo_cc( year_start = coh_year,
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2005 ),
                               year_end = 2021,
                               data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
                               variables_list = outcome_list_2,
                               group_var = "sexual_identity_baseline" )
   
@@ -2624,12 +2638,13 @@ prevalence_poo <- bind_rows( bind_rows( results_list_1 ),
 writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_co_cc.xlsx" )
 
 # by sex
-results_list_by_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
+results_list_by_sex_1 <- lapply( 2001:2021, function( coh_year ) {
   
   results <- cal_prev_poo_cc( year_start = coh_year,
                               year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
+                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_1,
                               group_var = "sexual_identity_baseline + sex",
                               subgroup = TRUE )
   
@@ -2637,40 +2652,21 @@ results_list_by_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), fun
   }
   )
 
-prevalence_poo_by_sex <- bind_rows( results_list_by_sex )
+results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2005 ),
+                              year_end = 2021,
+                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_2,
+                              group_var = "sexual_identity_baseline + sex",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
+                                    bind_rows( results_list_by_sex_2 ) )
 writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" )
-
-# by age
-results_list_by_age <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + age_group",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-prevalence_poo_by_age <- bind_rows( results_list_by_age )
-writexl::write_xlsx( prevalence_poo_by_age, "results_output/results_cc/prevalence_poo_co_by_age_cc.xlsx" )
-
-# by age and sex
-results_list_by_age_sex <- lapply( sort( unique( pooled_data_co$cohort_year ) ), function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_data_co %>% filter( cohort_year == coh_year ),
-                              variables_list = outcome_list,
-                              group_var = "sexual_identity_baseline + age_sex",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-prevalence_poo_by_age_sex <- bind_rows( results_list_by_age_sex )
-writexl::write_xlsx( prevalence_poo_by_age_sex, "results_output/results_cc/prevalence_poo_co_by_age_sex_cc.xlsx" )
 ```
