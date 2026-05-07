@@ -134,13 +134,13 @@ cal_pd_indi_cc <- function( design, exposure, outcome_list, year, covariates = N
 ##### Pooled Sample #####
 
 # prevalence by sexual identity
-cal_prev_poo_cc <- function( year_start, year_end, data, variables_list, group_var, subgroup = FALSE ) {
+cal_prev_poo_cc <- function( year_start, year_end, data, year_var, variables_list, group_var, subgroup = FALSE ) {
   
   results <- list()
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( sample_year == yr )
+    data_year <- data %>% filter( .data[[ year_var ]] == yr )
     
     design <- svydesign( ids = ~ 1, data = data_year )
     
@@ -178,13 +178,13 @@ cal_prev_poo_cc <- function( year_start, year_end, data, variables_list, group_v
 
 
 # calculate prevalence ratio
-cal_pr_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, covariates = NULL ) {
+cal_pr_poo_cc <- function( year_start, year_end, data, year_var, exposure, outcome_list, covariates = NULL ) {
   
   model_list <- list()
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( sample_year == yr )
+    data_year <- data %>% filter( .data[[ year_var ]] == yr )
     
     design <- svydesign( ids = ~1, data = data_year )
     
@@ -209,13 +209,13 @@ cal_pr_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, c
 
 
 # calculate prevalence difference
-cal_pd_poo_cc <- function( year_start, year_end, data, exposure, outcome_list, covariates = NULL ) {
+cal_pd_poo_cc <- function( year_start, year_end, data, year_var, exposure, outcome_list, covariates = NULL ) {
   
   model_list <- list()
   
   for ( yr in seq( year_start, year_end ) ) {
     
-    data_year <- data %>% filter( sample_year == yr )
+    data_year <- data %>% filter( .data[[ year_var ]] == yr )
     
     design <- svydesign( ids = ~1, data = data_year )
     
