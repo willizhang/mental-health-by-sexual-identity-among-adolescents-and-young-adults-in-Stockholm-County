@@ -1449,14 +1449,21 @@ plot_co_data_cc <- prevalence_poo_co_cc %>%
 
 summary( plot_co_data_cc )
 
+# plot_co_data_cc <- plot_co_data_cc %>%
+#   mutate(
+#     segment = case_when(
+#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
+#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
+#       outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
+#       TRUE ~ "complete"
+#     )
+#   )
+
 plot_co_data_cc <- plot_co_data_cc %>%
-  mutate(
-    segment = case_when(
-      outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
-      outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
-      outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
-      TRUE ~ "complete"
-    )
+  filter(
+    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ),
+    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ),
+    !( outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 )
   )
 
 vline_data <- data.frame(
@@ -1465,11 +1472,11 @@ vline_data <- data.frame(
   sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
 
-vline_data_covid <- data.frame(
-  year = 2020, # March 2020
-  label = "COVID-19 Outbreak",
-  sexual_identity_baseline = factor( c( "Heterosexual" ),
-                                     levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
+# vline_data_covid <- data.frame(
+#   year = 2020, # March 2020
+#   label = "COVID-19 Outbreak",
+#   sexual_identity_baseline = factor( c( "Heterosexual" ),
+#                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
 ```
 
 ###### 4.1.1.2. Antidepressant use
@@ -1481,22 +1488,23 @@ plot_co_data_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
     filter( outcome == "antidepressant_use" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
   
   scale_x_continuous(
-    limits = c( 2005, 2021 ),
-    breaks = seq( 2005, 2021, by = 4 ),
+    limits = c( 2006, 2021 ),
+    breaks = seq( 2006, 2021, by = 3 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -1513,7 +1521,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Antidepressant Use" ) +
+    y = "Annual Prevalence of Antidepressant Use" ) +
   
   facet_wrap( ~ sexual_identity_baseline ) +
   
@@ -1582,22 +1590,23 @@ plot_co_data_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
     filter( outcome == "anxiolytic_use" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
   
   scale_x_continuous(
-    limits = c( 2005, 2021 ),
-    breaks = seq( 2005, 2021, by = 4 ),
+    limits = c( 2006, 2021 ),
+    breaks = seq( 2006, 2021, by = 3 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -1614,7 +1623,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Anxiolytic Use" ) +
+    y = "Annual Prevalence of Anxiolytic Use" ) +
   
   facet_wrap( ~ sexual_identity_baseline ) +
   
@@ -1683,22 +1692,23 @@ plot_co_data_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
     filter( outcome == "depression" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
     
   scale_x_continuous(
-    limits = c( 2001, 2021 ),
-    breaks = seq( 2001, 2021, by = 4 ),
+    limits = c( 2003, 2019 ),
+    breaks = seq( 2003, 2019, by = 4 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -1715,7 +1725,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Depression" ) +
+    y = "Annual Prevalence of Depression" ) +
   
   facet_wrap( ~ sexual_identity_baseline ) +
   
@@ -1784,22 +1794,23 @@ plot_co_data_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
     filter( outcome == "anxiety" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
     
   scale_x_continuous(
-    limits = c( 2001, 2021 ),
-    breaks = seq( 2001, 2021, by = 4 ),
+    limits = c( 2003, 2019 ),
+    breaks = seq( 2003, 2019, by = 4 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -1816,7 +1827,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Anxiety Disorders" ) +
+    y = "Annual Prevalence of Anxiety Disorders" ) +
   
   facet_wrap( ~ sexual_identity_baseline ) +
   
@@ -1885,22 +1896,23 @@ plot_co_data_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
     filter( outcome == "stress_related" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
 
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +  
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +  
     
   scale_x_continuous(
-    limits = c( 2001, 2021 ),
-    breaks = seq( 2001, 2021, by = 4 ),
+    limits = c( 2003, 2019 ),
+    breaks = seq( 2003, 2019, by = 4 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -1917,7 +1929,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Stress-Related Disorders" ) +
+    y = "Annual Prevalence of Stress-Related Disorders" ) +
   
   facet_wrap( ~ sexual_identity_baseline ) +
   
@@ -1999,14 +2011,21 @@ plot_co_data_by_sex_cc <- prevalence_poo_co_by_sex_cc %>%
 
 summary( plot_co_data_by_sex_cc )
 
+# plot_co_data_by_sex_cc <- plot_co_data_by_sex_cc %>%
+#   mutate(
+#     segment = case_when(
+#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
+#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
+#       outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
+#       TRUE ~ "complete"
+#     )
+#   )
+
 plot_co_data_by_sex_cc <- plot_co_data_by_sex_cc %>%
-  mutate(
-    segment = case_when(
-      outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
-      outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
-      outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
-      TRUE ~ "complete"
-    )
+  filter(
+    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ),
+    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ),
+    !( outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 )
   )
 
 vline_data <- data.frame(
@@ -2015,11 +2034,11 @@ vline_data <- data.frame(
   sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
 
-vline_data_covid <- data.frame(
-  year = 2020, # March 2020
-  label = "COVID-19 Outbreak",
-  sexual_identity_baseline = factor( c( "Heterosexual" ),
-                                     levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
+# vline_data_covid <- data.frame(
+#   year = 2020, # March 2020
+#   label = "COVID-19 Outbreak",
+#   sexual_identity_baseline = factor( c( "Heterosexual" ),
+#                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
 ```
 
 ###### 4.1.2.2. Antidepressant use
@@ -2031,22 +2050,23 @@ plot_co_data_by_sex_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
     filter( outcome == "antidepressant_use" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
   
   scale_x_continuous(
-    limits = c( 2005, 2021 ),
-    breaks = seq( 2005, 2021, by = 4 ),
+    limits = c( 2006, 2021 ),
+    breaks = seq( 2006, 2021, by = 3 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -2063,7 +2083,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Antidepressant Use" ) +
+    y = "Annual Prevalence of Antidepressant Use" ) +
   
   facet_grid( sex ~ sexual_identity_baseline,
               switch = "y" ) +
@@ -2137,22 +2157,23 @@ plot_co_data_by_sex_cc %>%
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
     filter( outcome == "depression" ),
-  aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+  aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
   
-  scale_linetype_manual( 
-    values = c( 
-      "complete" = "solid",
-      "incomplete_1" = "solid",
-      "incomplete_2" = "solid",
-      "incomplete_3" = "solid" ),
-    guide = "none" ) +
+  # scale_linetype_manual( 
+  #   values = c( 
+  #     "complete" = "solid",
+  #     "incomplete_1" = "solid",
+  #     "incomplete_2" = "solid",
+  #     "incomplete_3" = "solid" ),
+  #   guide = "none" ) +
   
   scale_x_continuous(
-    limits = c( 2001, 2021 ),
-    breaks = seq( 2001, 2021, by = 4 ),
+    limits = c( 2003, 2019 ),
+    breaks = seq( 2003, 2019, by = 4 ),
     expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_y_continuous( 
@@ -2169,7 +2190,7 @@ p_prevalence <- ggplot(
   
   labs(
     x = "Calendar Year",
-    y = "Prevalence of Depression" ) +
+    y = "Annual Prevalence of Depression" ) +
   
   facet_grid( sex ~ sexual_identity_baseline,
               switch = "y" ) +
