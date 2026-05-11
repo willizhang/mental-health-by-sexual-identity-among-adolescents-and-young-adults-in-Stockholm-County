@@ -133,7 +133,7 @@ cal_pd_indi_cc <- function( design, exposure, outcome_list, year, covariates = N
 
 ##### Pooled Sample #####
 
-# prevalence by sexual identity
+# annual prevalence by sexual identity
 cal_prev_poo_cc <- function( year_start, year_end, data, year_var, variables_list, group_var, subgroup = FALSE ) {
   
   results <- list()
@@ -175,6 +175,63 @@ cal_prev_poo_cc <- function( year_start, year_end, data, year_var, variables_lis
   
   return( results )
   }
+
+# cumulative prevalence by sexual identity
+cal_prev_poo_cc_cum <- function( year_start, year_end, data, year_var, variables_list, group_var, subgroup = FALSE ) {
+  
+  results <- list()
+  
+  for ( yr in seq( year_start, year_end ) ) {
+    
+    # cumulative follow-up up to current year
+    data_year <- data %>% filter( .data[[ year_var ]] <= yr )
+    
+    for ( var in variables_list ) {
+      
+      # ever had outcome up to year yr
+      data_cum <- data_year %>%
+        group_by( lopnr ) %>%
+        mutate(
+          cum_outcome = if_else(
+            any( .data[[ var$variable ]] == var$condition ),
+            "Yes",
+            "No"
+            )
+          ) %>%
+        slice_tail( n = 1 ) %>%   # retain one row per individual
+        ungroup()
+      
+      design <- svydesign( ids = ~1, data = data_cum )
+      
+      svyby_result <- svyby(
+        formula = ~I( cum_outcome == "Yes" ),
+        by = as.formula( paste0( "~", group_var ) ),
+        design = design,
+        FUN = svyciprop,
+        vartype = "ci",
+        method = "beta"
+        ) %>%
+        remove_rownames()
+      
+        if ( subgroup ) {
+          colnames( svyby_result )[ -c( 1, 2 ) ] <- c( "point_estimate", "lower_ci", "upper_ci" )
+          
+        } else {
+          colnames( svyby_result )[ -1 ] <- c( "point_estimate", "lower_ci", "upper_ci" )
+        }
+        
+        svyby_result <- svyby_result %>%
+          mutate(
+            outcome = var$name,
+            cum_year = yr
+          )
+        
+        results[[ paste0( var$name, "_cum_", yr ) ]] <- svyby_result
+    }
+  }
+  
+  return( results )
+}
 
 
 # calculate prevalence ratio

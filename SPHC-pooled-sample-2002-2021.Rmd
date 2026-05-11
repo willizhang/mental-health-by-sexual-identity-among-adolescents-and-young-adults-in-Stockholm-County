@@ -2604,7 +2604,7 @@ outcome_list_2 <- list(
   list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
   list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
 
-########## Prevalence ##########
+########## Annual Prevalence ##########
 
 # by sexual identity
 results_list_1 <- lapply( 2001:2021, function( coh_year ) {
@@ -2669,4 +2669,90 @@ results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
 prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
                                     bind_rows( results_list_by_sex_2 ) )
 writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" )
+
+
+########## Cumulative Prevalence ##########
+
+pooled_sample_co_long_diag <- pooled_sample_co_long %>%
+  select( -c( used_N06A, used_N05B ) ) %>%
+  filter( !year %in% c( 2001, 2002, 2020, 2021 ) )
+
+pooled_sample_co_long_med <- pooled_sample_co_long %>%
+  select( -c( depression, anxiety, stress_related ) ) %>%
+  filter( year >= 2006 )
+
+pooled_sample_co_long_diag %>%
+  count( cohort_year, year ) %>%
+  arrange( cohort_year, year ) %>%
+  print( n = 50 )
+
+pooled_sample_co_long_med %>%
+  count( cohort_year, year ) %>%
+  arrange( cohort_year, year ) %>%
+  print( n = 50 )
+
+
+# by sexual identity
+results_list_1 <- lapply( 2001:2019, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2003 ),
+                                  year_end = 2019,
+                                  data = pooled_sample_co_long_diag %>% filter( cohort_year == coh_year ),
+                                  year_var = "year",
+                                  variables_list = outcome_list_1,
+                                  group_var = "sexual_identity_baseline" )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+results_list_2 <- lapply( 2001:2021, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2006 ),
+                                  year_end = 2021,
+                                  data = pooled_sample_co_long_med %>% filter( cohort_year == coh_year ),
+                                  year_var = "year",
+                                  variables_list = outcome_list_2,
+                                  group_var = "sexual_identity_baseline" )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+cum_prevalence_poo <- bind_rows( bind_rows( results_list_1 ),
+                                 bind_rows( results_list_2 ) )
+writexl::write_xlsx( cum_prevalence_poo, "results_output/results_cc/cum_prevalence_poo_co_cc.xlsx" )
+
+# by sex
+results_list_by_sex_1 <- lapply( 2001:2019, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2003 ),
+                                  year_end = 2019,
+                                  data = pooled_sample_co_long_diag %>% filter( cohort_year == coh_year ),
+                                  year_var = "year",
+                                  variables_list = outcome_list_1,
+                                  group_var = "sexual_identity_baseline + sex",
+                                  subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2006 ),
+                                  year_end = 2021,
+                                  data = pooled_sample_co_long_med %>% filter( cohort_year == coh_year ),
+                                  year_var = "year",
+                                  variables_list = outcome_list_2,
+                                  group_var = "sexual_identity_baseline + sex",
+                                  subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+cum_prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
+                                        bind_rows( results_list_by_sex_2 ) )
+writexl::write_xlsx( cum_prevalence_poo_by_sex, "results_output/results_cc/cum_prevalence_poo_co_by_sex_cc.xlsx" )
 ```
