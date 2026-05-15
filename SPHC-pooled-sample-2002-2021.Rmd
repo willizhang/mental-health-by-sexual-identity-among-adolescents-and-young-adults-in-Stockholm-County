@@ -24,6 +24,7 @@ library(jomo)
 library(mitml)
 library(mitools)
 library(UpSetR)
+library(writexl)
 library(here)
 source('helper_functions.R') # helper function
 ```
@@ -1684,6 +1685,42 @@ pooled_sample_cs <- pooled_sample_cs %>%
           death = factor( death, levels = c( "Yes", "No" ) ) )
 
 summary( pooled_sample_cs )
+n_distinct( pooled_sample_cs$lopnr ) # 38,675
+
+# sample characteristics
+table_cs <- pooled_sample_cs %>%
+  group_by( sample_year ) %>%
+  summarise(
+    
+    N = n(),
+    
+    `Age, mean (SD)` =
+      paste0(
+        round( mean( age ), 1 ),
+        " (",
+        round( sd( age ), 1 ),
+        ")"
+      ),
+    
+    `Female, %` =
+      round( mean( sex == "Female" ) * 100, 1 ),
+    
+    `Born outside Sweden, %` =
+      round( mean( country_of_birth != "Sweden" ) * 100, 1 ),
+    
+    `Homosexual, %` =
+      round( mean( sexual_identity_baseline == "Homosexual",
+                   na.rm = TRUE ) * 100, 1 ),
+    
+    `Bisexual, %` =
+      round( mean( sexual_identity_baseline == "Bisexual",
+                   na.rm = TRUE ) * 100, 1 ),
+    
+    `Missing sexual identity, %` =
+      round( mean( is.na( sexual_identity_baseline ) ) * 100, 1 )
+  )
+
+table_cs
 ```
 
 #### 4.2. Plot samples
@@ -2344,6 +2381,7 @@ for ( yr in 2001:2021 ) {
   study_sample <- d_all_selected_death %>%
     filter( birth_year >= yr - 29,
             birth_year <= yr - 16,
+            !is.na( sexual_identity_baseline ),
             is.na( death_date ) ) %>% # exclude participants with death event
     mutate( age = yr - birth_year )
     
@@ -2406,22 +2444,53 @@ pooled_sample_co_final <- bind_rows( yearly_sample, .id = "cohort_year" ) %>%
   mutate( cohort_year = as.integer( cohort_year ) )
 
 summary( pooled_sample_co_final )
-nrow( pooled_sample_co_final ) # 284,602
-n_distinct( pooled_sample_co_final$lopnr ) # 35,463
-nrow( pooled_sample_co ) - nrow( pooled_sample_co_final ) # 37,267
+nrow( pooled_sample_co_final ) # 244,881
+n_distinct( pooled_sample_co_final$lopnr ) # 30,420
+nrow( pooled_sample_co ) - nrow( pooled_sample_co_final ) # 30,746
 print( pooled_sample_co_final %>% count( cohort_year ),
        n = Inf )
+
+# sample characteristics
+table_co <- pooled_sample_co_final %>%
+  group_by( cohort_year ) %>%
+  summarise(
+    
+    N = format( n(), big.mark = "," ),
+    
+    `Age, mean (SD)` =
+      paste0(
+        sprintf( "%.1f", mean( age ) ),
+        " (",
+        sprintf( "%.1f", sd( age ) ),
+        ")" ),
+    
+    `Female, %` =
+      sprintf( "%.1f", mean( sex == "Female" ) * 100 ),
+    
+    `Born outside Sweden, %` =
+      sprintf( "%.1f", mean( country_of_birth != "Sweden" ) * 100 ),
+    
+    `Homosexual, %` =
+      sprintf( "%.1f", mean( sexual_identity_baseline == "Homosexual" ) * 100 ),
+    
+    `Bisexual, %` =
+      sprintf( "%.1f", mean( sexual_identity_baseline == "Bisexual" ) * 100 ),
+    
+    `Participants from SPHC 2021, %` =
+      sprintf( "%.1f", mean( survey_year == "SPHC 2021" ) * 100 )
+    )
+
+write_xlsx( table_co, "results_output/plots_general/table_co.xlsx" )
 ```
 
 #### 5.2. Plot samples
 ```{r}
 plot_sample_co <- pooled_sample_co_final %>%
-  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ) ) %>%
   group_by( cohort_year, sexual_identity_baseline ) %>%
   summarise( n = n(), .groups = "drop" ) %>%
   mutate( identity_group = case_when( 
             sexual_identity_baseline %in% c( "Heterosexual" ) ~ "Heterosexual",
-            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other", "Missing" ) ~ "Sexual Minority or Missing" ) ) %>%
+            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other" ) ~ "Sexual Minority" ) ) %>%
   arrange( identity_group, n )
 
 # plot sample size by year
@@ -2438,14 +2507,13 @@ p_pooled_sample_co <- ggplot(
   scale_x_continuous(
     limits = c( 2001, 2021 ),
     breaks = seq( 2001, 2021, 4 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+    expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_color_manual( values = c(
     "Heterosexual" = "#F8766D",
     "Homosexual"   = "#00BFC4",
     "Bisexual"     = "#C77CFF",
-    "Other"        = "#7CAE00",
-    "Missing"      = "#7f7f7f" ) ) +
+    "Other"        = "#7CAE00" ) ) +
   
   labs( x = "Cohort Sample Year",
         y = "Number of Participants",
@@ -2466,9 +2534,9 @@ p_pooled_sample_co <- ggplot(
   
   ggh4x::facetted_pos_scales( y = list(
     identity_group == "Heterosexual" ~ scale_y_continuous( limits = c( 4000, 18000 ), breaks = c( seq( 4000, 18000, 2000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ),
-    identity_group == "Sexual Minority or Missing" ~ scale_y_continuous( limits = c( 0, 4000 ), breaks = c( seq( 0, 4000, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
+    identity_group == "Sexual Minority" ~ scale_y_continuous( limits = c( 0, 600 ), breaks = c( seq( 0, 600, 200 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
   
-  coord_capped_cart( left = "top", bottom = 'right', gap = 0 )
+  coord_capped_cart( left = "both", bottom = "both" )
 
 p_pooled_sample_co
 ggsave( "results_output/plots_general/p_pooled_sample_co.svg", plot = p_pooled_sample_co, width = 11, height = 6 )
@@ -2604,75 +2672,6 @@ outcome_list_2 <- list(
   list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
   list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
 
-########## Annual Prevalence ##########
-
-# by sexual identity
-results_list_1 <- lapply( 2001:2021, function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
-                              year_var = "year",
-                              variables_list = outcome_list_1,
-                              group_var = "sexual_identity_baseline" )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-results_list_2 <- lapply( 2001:2021, function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = max( coh_year, 2005 ),
-                              year_end = 2021,
-                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
-                              year_var = "year",
-                              variables_list = outcome_list_2,
-                              group_var = "sexual_identity_baseline" )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-prevalence_poo <- bind_rows( bind_rows( results_list_1 ),
-                             bind_rows( results_list_2 ) )
-writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_co_cc.xlsx" )
-
-# by sex
-results_list_by_sex_1 <- lapply( 2001:2021, function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = coh_year,
-                              year_end = 2021,
-                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
-                              year_var = "year",
-                              variables_list = outcome_list_1,
-                              group_var = "sexual_identity_baseline + sex",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
-  
-  results <- cal_prev_poo_cc( year_start = max( coh_year, 2005 ),
-                              year_end = 2021,
-                              data = pooled_sample_co_long %>% filter( cohort_year == coh_year ),
-                              year_var = "year",
-                              variables_list = outcome_list_2,
-                              group_var = "sexual_identity_baseline + sex",
-                              subgroup = TRUE )
-  
-  bind_rows( results ) %>% mutate( cohort_year = coh_year )
-  }
-  )
-
-prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
-                                    bind_rows( results_list_by_sex_2 ) )
-writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" )
-
-
-########## Cumulative Prevalence ##########
-
 pooled_sample_co_long_diag <- pooled_sample_co_long %>%
   select( -c( used_N06A, used_N05B ) ) %>%
   filter( !year %in% c( 2001, 2002, 2020, 2021 ) )
@@ -2692,8 +2691,77 @@ pooled_sample_co_long_med %>%
   print( n = 50 )
 
 
+########## Annual Prevalence ##########
+
 # by sexual identity
-results_list_1 <- lapply( 2001:2019, function( coh_year ) {
+ann_diag_list <- lapply( 2001:2019, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2003 ),
+                              year_end = 2019,
+                              data = pooled_sample_co_long_diag %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_1,
+                              group_var = "sexual_identity_baseline" )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+ann_med_list <- lapply( 2001:2021, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2006 ),
+                              year_end = 2021,
+                              data = pooled_sample_co_long_med %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_2,
+                              group_var = "sexual_identity_baseline" )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo <- bind_rows( bind_rows( ann_diag_list ),
+                             bind_rows( ann_med_list ) )
+writexl::write_xlsx( prevalence_poo, "results_output/results_cc/ann_prevalence_poo_co_cc.xlsx" )
+
+# by sex
+ann_diag_list_by_sex <- lapply( 2001:2019, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2003 ),
+                              year_end = 2019,
+                              data = pooled_sample_co_long_diag %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_1,
+                              group_var = "sexual_identity_baseline + sex",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+ann_med_list_by_sex <- lapply( 2001:2021, function( coh_year ) {
+  
+  results <- cal_prev_poo_cc( year_start = max( coh_year, 2006 ),
+                              year_end = 2021,
+                              data = pooled_sample_co_long_med %>% filter( cohort_year == coh_year ),
+                              year_var = "year",
+                              variables_list = outcome_list_2,
+                              group_var = "sexual_identity_baseline + sex",
+                              subgroup = TRUE )
+  
+  bind_rows( results ) %>% mutate( cohort_year = coh_year )
+  }
+  )
+
+prevalence_poo_by_sex <- bind_rows( bind_rows( ann_diag_list_by_sex ),
+                                    bind_rows( ann_med_list_by_sex ) )
+writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/ann_prevalence_poo_co_by_sex_cc.xlsx" )
+
+
+########## Cumulative Prevalence ##########
+
+# by sexual identity
+cum_diag_list <- lapply( 2001:2019, function( coh_year ) {
   
   results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2003 ),
                                   year_end = 2019,
@@ -2706,7 +2774,7 @@ results_list_1 <- lapply( 2001:2019, function( coh_year ) {
   }
   )
 
-results_list_2 <- lapply( 2001:2021, function( coh_year ) {
+cum_med_list <- lapply( 2001:2021, function( coh_year ) {
   
   results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2006 ),
                                   year_end = 2021,
@@ -2719,12 +2787,12 @@ results_list_2 <- lapply( 2001:2021, function( coh_year ) {
   }
   )
 
-cum_prevalence_poo <- bind_rows( bind_rows( results_list_1 ),
-                                 bind_rows( results_list_2 ) )
+cum_prevalence_poo <- bind_rows( bind_rows( cum_diag_list ),
+                                 bind_rows( cum_med_list ) )
 writexl::write_xlsx( cum_prevalence_poo, "results_output/results_cc/cum_prevalence_poo_co_cc.xlsx" )
 
 # by sex
-results_list_by_sex_1 <- lapply( 2001:2019, function( coh_year ) {
+cum_diag_list_by_sex <- lapply( 2001:2019, function( coh_year ) {
   
   results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2003 ),
                                   year_end = 2019,
@@ -2738,7 +2806,7 @@ results_list_by_sex_1 <- lapply( 2001:2019, function( coh_year ) {
   }
   )
 
-results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
+cum_med_list_by_sex <- lapply( 2001:2021, function( coh_year ) {
   
   results <- cal_prev_poo_cc_cum( year_start = max( coh_year, 2006 ),
                                   year_end = 2021,
@@ -2752,7 +2820,7 @@ results_list_by_sex_2 <- lapply( 2001:2021, function( coh_year ) {
   }
   )
 
-cum_prevalence_poo_by_sex <- bind_rows( bind_rows( results_list_by_sex_1 ),
-                                        bind_rows( results_list_by_sex_2 ) )
+cum_prevalence_poo_by_sex <- bind_rows( bind_rows( cum_diag_list_by_sex ),
+                                        bind_rows( cum_med_list_by_sex ) )
 writexl::write_xlsx( cum_prevalence_poo_by_sex, "results_output/results_cc/cum_prevalence_poo_co_by_sex_cc.xlsx" )
 ```
