@@ -1431,11 +1431,11 @@ ggsave( "results_output/plots_cc/p_pr_pd_self_report_cc.svg", plot = p_pr_pd, wi
 ##### 4.1.1. By sexual identity
 ###### 4.1.1.1. Prepare data
 ```{r}
-prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/prevalence_poo_co_cc.xlsx" ) )
-summary( prevalence_poo_co_cc )
-unique( prevalence_poo_co_cc$sexual_identity_baseline )
+ann_prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/ann_prevalence_poo_co_cc.xlsx" ) )
+summary( ann_prevalence_poo_co_cc )
+unique( ann_prevalence_poo_co_cc$sexual_identity_baseline )
 
-plot_co_data_cc <- prevalence_poo_co_cc %>%
+plot_co_data_cc <- ann_prevalence_poo_co_cc %>%
   filter(
     sexual_identity_baseline %in% c( "Heterosexual", "Homosexual", "Bisexual" )
     ) %>%
@@ -1458,13 +1458,6 @@ summary( plot_co_data_cc )
 #       TRUE ~ "complete"
 #     )
 #   )
-
-plot_co_data_cc <- plot_co_data_cc %>%
-  filter(
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ),
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ),
-    !( outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 )
-  )
 
 vline_data <- data.frame(
   year = 2009, # May 1, 2009
@@ -1992,11 +1985,11 @@ ggsave( "results_output/plots_cc/p_ann_prevalence_poo_co_stress_cc.svg", plot = 
 ##### 4.1.2. By sex
 ###### 4.1.2.1. Prepare data
 ```{r}
-prevalence_poo_co_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_poo_co_by_sex_cc.xlsx" ) )
-summary( prevalence_poo_co_by_sex_cc )
-unique( prevalence_poo_co_by_sex_cc$sexual_identity_baseline )
+ann_prevalence_poo_co_by_sex_cc <- read_xlsx( here( "results_output/results_cc/ann_prevalence_poo_co_by_sex_cc.xlsx" ) )
+summary( ann_prevalence_poo_co_by_sex_cc )
+unique( ann_prevalence_poo_co_by_sex_cc$sexual_identity_baseline )
 
-plot_co_data_by_sex_cc <- prevalence_poo_co_by_sex_cc %>%
+plot_co_data_by_sex_cc <- ann_prevalence_poo_co_by_sex_cc %>%
   filter(
     sexual_identity_baseline %in% c( "Heterosexual", "Homosexual", "Bisexual" )
     ) %>%
@@ -2020,13 +2013,6 @@ summary( plot_co_data_by_sex_cc )
 #       TRUE ~ "complete"
 #     )
 #   )
-
-plot_co_data_by_sex_cc <- plot_co_data_by_sex_cc %>%
-  filter(
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ),
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ),
-    !( outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 )
-  )
 
 vline_data <- data.frame(
   year = 2009, # May 1, 2009
@@ -3116,11 +3102,11 @@ ggsave( "results_output/plots_cc/p_cum_prevalence_poo_co_stress_by_sex_cc.svg", 
 ###### 4.3.1.1. Prepare data
 ```{r}
 # annual prevalence
-prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/prevalence_poo_co_cc.xlsx" ) )
-summary( prevalence_poo_co_cc )
-unique( prevalence_poo_co_cc$sexual_identity_baseline )
+ann_prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/ann_prevalence_poo_co_cc.xlsx" ) )
+summary( ann_prevalence_poo_co_cc )
+unique( ann_prevalence_poo_co_cc$sexual_identity_baseline )
 
-plot_co_data_cc <- prevalence_poo_co_cc %>%
+plot_co_data_cc <- ann_prevalence_poo_co_cc %>%
   filter(
     sexual_identity_baseline %in% c( "Heterosexual", "Homosexual", "Bisexual" )
     ) %>%
@@ -3133,13 +3119,6 @@ plot_co_data_cc <- prevalence_poo_co_cc %>%
     )
 
 summary( plot_co_data_cc )
-
-plot_co_data_cc <- plot_co_data_cc %>%
-  filter(
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ),
-    !( outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ),
-    !( outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 )
-  )
 
 # cumulative prevalence
 cum_prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/cum_prevalence_poo_co_cc.xlsx" ) )
