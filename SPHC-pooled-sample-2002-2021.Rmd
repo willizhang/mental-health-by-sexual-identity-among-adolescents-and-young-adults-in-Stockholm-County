@@ -277,22 +277,22 @@ summary( d_2021 %>% select( any_of( variable_list ) ) )
 
 ### CLEAN DATA ###
 
-# SPHC 2002 to 2014
+# SPHC-B 2002 to 2014
 d_2002_selected <- d_2002 %>%
   select( any_of( variable_list ) ) %>%
-  mutate( survey_year = "SPHC 2002" )
+  mutate( survey_year = "SPHC-B 2002" )
 
 d_2006_selected <- d_2006 %>%
   select( any_of( variable_list ) ) %>%
-  mutate( survey_year = "SPHC 2006" )
+  mutate( survey_year = "SPHC-B 2006" )
 
 d_2010_selected <- d_2010 %>%
   select( any_of( variable_list ) ) %>%
-  mutate( survey_year = "SPHC 2010" )
+  mutate( survey_year = "SPHC-B 2010" )
 
 d_2014_selected <- d_2014 %>%
   select( any_of( variable_list ) ) %>%
-  mutate( survey_year = "SPHC 2014" )
+  mutate( survey_year = "SPHC-B 2014" )
 
 pre2021 <- bind_rows(
   d_2002_selected,
@@ -359,8 +359,8 @@ pre2021_selected <- pre2021_selected %>%
     
     # sexual identity
     sexual_identity_baseline = case_when(
-      survey_year %in% c( "SPHC 2002", "SPHC 2006", "SPHC 2010" ) ~ sexual_identity_2010,
-      survey_year == "SPHC 2014" ~ sexual_identity_2014 ),
+      survey_year %in% c( "SPHC-B 2002", "SPHC-B 2006", "SPHC-B 2010" ) ~ sexual_identity_2010,
+      survey_year == "SPHC-B 2014" ~ sexual_identity_2014 ),
     
     # generation
     generation = factor(
@@ -377,14 +377,14 @@ pre2021_selected <- pre2021_selected %>%
 table( pre2021_selected$survey_year, pre2021_selected$sexual_identity_baseline, useNA = "always" )
 summary( pre2021_selected )
 
-# SPHC 2021
+# SPHC-B 2021
 d_2021_selected <- d_2021 %>%
   select( any_of( variable_list ) ) %>%
   mutate( 
     
     sexual_identity_baseline = sexual_identity_2021,
     
-    survey_year = "SPHC 2021",
+    survey_year = "SPHC-B 2021",
           
     # generation
     generation = factor(
@@ -460,7 +460,7 @@ ggsave( "results_output/plots_general/birth_year_distribution_by_year.svg", plot
 
 #### 2.3. Follow-up period through registry
 ```{r}
-### SPHC 2002 to 2014 ###
+### SPHC-B 2002 to 2014 ###
 
 # migration dates
 migration_date_2002_2014 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/migration_all_2002_2014.sas7bdat')
@@ -509,7 +509,7 @@ length( unique( dates_all_2002_2014$lopnr ) ) # 20,831
 length( intersect( unique( dates_all_2002_2014$lopnr ), d_all_selected$lopnr ) ) # 20,831
 
 
-### SPHC 2021 ###
+### SPHC-B 2021 ###
 
 # migration dates
 migration_date_2021 <- read_sas('/Volumes/projects/LGBT Project data/Swedish Registers/migration_all_2021.sas7bdat') %>%
@@ -678,7 +678,7 @@ length( unique( reusedpnr_all_dates$lopnr ) ) == length( reusedpnr_all$lopnr ) #
 summary( reusedpnr_all_dates )
 
 sampling_date <- data.frame(
-  survey_year = c( "SPHC 2002", "SPHC 2006", "SPHC 2010", "SPHC 2014", "SPHC 2021" ),
+  survey_year = c( "SPHC-B 2002", "SPHC-B 2006", "SPHC-B 2010", "SPHC-B 2014", "SPHC-B 2021" ),
   sampling_date = as.Date( c( "2002-10-08", "2006-08-09", "2009-12-31", "2014-08-31", "2021-04-08" ) ) )
 
 reusedpnr_all_dates <- reusedpnr_all_dates %>%
@@ -750,16 +750,16 @@ dates_all <- dates_all %>%
 
 summary( dates_all )
 
-length( unique( dates_all[ dates_all$survey_year == "SPHC 2002", ]$lopnr ) ) # 5,503 in SPHC 2002
-max( dates_all[ dates_all$survey_year == "SPHC 2002", ]$individual_id )
-length( unique( dates_all[ dates_all$survey_year == "SPHC 2006", ]$lopnr ) ) # 6,938 in SPHC 2006
-max( dates_all[ dates_all$survey_year == "SPHC 2006", ]$individual_id )
-length( unique( dates_all[ dates_all$survey_year == "SPHC 2010", ]$lopnr ) ) # 5,208 in SPHC 2010
-max( dates_all[ dates_all$survey_year == "SPHC 2010", ]$individual_id )
-length( unique( dates_all[ dates_all$survey_year == "SPHC 2014", ]$lopnr ) ) # 3,182 in SPHC 2014
-max( dates_all[ dates_all$survey_year == "SPHC 2014", ]$individual_id )
-length( unique( dates_all[ dates_all$survey_year == "SPHC 2021", ]$lopnr ) ) # 4,327 in SPHC 2021
-max( dates_all[ dates_all$survey_year == "SPHC 2021", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC-B 2002", ]$lopnr ) ) # 5,503 in SPHC-B 2002
+max( dates_all[ dates_all$survey_year == "SPHC-B 2002", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC-B 2006", ]$lopnr ) ) # 6,938 in SPHC-B 2006
+max( dates_all[ dates_all$survey_year == "SPHC-B 2006", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC-B 2010", ]$lopnr ) ) # 5,208 in SPHC-B 2010
+max( dates_all[ dates_all$survey_year == "SPHC-B 2010", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC-B 2014", ]$lopnr ) ) # 3,182 in SPHC-B 2014
+max( dates_all[ dates_all$survey_year == "SPHC-B 2014", ]$individual_id )
+length( unique( dates_all[ dates_all$survey_year == "SPHC-B 2021", ]$lopnr ) ) # 4,327 in SPHC-B 2021
+max( dates_all[ dates_all$survey_year == "SPHC-B 2021", ]$individual_id )
 
 sampling_date <- sampling_date %>%
   rowwise() %>%
@@ -839,19 +839,19 @@ p_registry_dates <-
               scales = "free_y",
               labeller = labeller(
                 survey_year = c(
-                  "SPHC 2002" = paste0( "SPHC 2002 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2002" ] ), big.mark = "," ), ")" ),
-                  "SPHC 2006" = paste0( "SPHC 2006 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2006" ] ), big.mark = "," ), ")" ),
-                  "SPHC 2010" = paste0( "SPHC 2010 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2010" ] ), big.mark = "," ), ")" ),
-                  "SPHC 2014" = paste0( "SPHC 2014 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2014" ] ), big.mark = "," ), ")" ),
-                  "SPHC 2021" = paste0( "SPHC 2021 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC 2021" ] ), big.mark = "," ), ")" )
+                  "SPHC-B 2002" = paste0( "SPHC-B 2002 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC-B 2002" ] ), big.mark = "," ), ")" ),
+                  "SPHC-B 2006" = paste0( "SPHC-B 2006 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC-B 2006" ] ), big.mark = "," ), ")" ),
+                  "SPHC-B 2010" = paste0( "SPHC-B 2010 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC-B 2010" ] ), big.mark = "," ), ")" ),
+                  "SPHC-B 2014" = paste0( "SPHC-B 2014 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC-B 2014" ] ), big.mark = "," ), ")" ),
+                  "SPHC-B 2021" = paste0( "SPHC-B 2021 (N = ", format( max( dates_all$individual_id[ dates_all$survey_year == "SPHC-B 2021" ] ), big.mark = "," ), ")" )
                   ) ) ) +
   
   ggh4x::facetted_pos_scales( y = list(
-    survey_year == "SPHC 2002" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
-    survey_year == "SPHC 2006" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000, 7000 ) ),
-    survey_year == "SPHC 2010" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
-    survey_year == "SPHC 2014" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000 ) ),
-    survey_year == "SPHC 2021" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000, 4000 ) ) )
+    survey_year == "SPHC-B 2002" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
+    survey_year == "SPHC-B 2006" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000, 7000 ) ),
+    survey_year == "SPHC-B 2010" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 3000, 5000 ) ),
+    survey_year == "SPHC-B 2014" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000 ) ),
+    survey_year == "SPHC-B 2021" ~ scale_y_continuous( expand = c( 0.02, 0 ), breaks = c( 1, 1000, 2000, 3000, 4000 ) ) )
     )
 
 p_registry_dates
@@ -896,7 +896,7 @@ ggsave( "results_output/plots_general/age_at_death.svg", plot = p_death_age_year
 #### 3.1. Register diagnosis
 ##### 3.1.1. Prepare datasets
 ```{r}
-##### SPHC 2002 to 2014 #####
+##### SPHC-B 2002 to 2014 #####
 
 # outpatient care
 outpatient_2002_2014 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Registers/mental_diagnoses_outpatient.dta')
@@ -972,10 +972,10 @@ summary( d_diagnosis_2002_2014 )
 
 n_distinct( d_diagnosis_2002_2014$lopnr ) == 
   length( intersect( unique( d_diagnosis_2002_2014$lopnr ),
-                     d_all_selected$lopnr[ d_all_selected$survey_year != "SPHC 2021" ] ) ) # TRUE
+                     d_all_selected$lopnr[ d_all_selected$survey_year != "SPHC-B 2021" ] ) ) # TRUE
 
 
-##### SPHC 2021 #####
+##### SPHC-B 2021 #####
 
 outpatient_2021 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Registers/mental_diagnoses_outpatient_2021.dta')
 inpatient_2021 <- read_dta('/Volumes/projects/LGBT Project data/Swedish Registers/mental_diagnoses_inpatient_2021.dta')
@@ -1021,7 +1021,7 @@ summary( d_diagnosis_2021 )
 
 n_distinct( d_diagnosis_2021$lopnr ) == 
   length( intersect( unique( d_diagnosis_2021$lopnr ),
-                     d_all_selected$lopnr[ d_all_selected$survey_year == "SPHC 2021" ] ) ) # TRUE
+                     d_all_selected$lopnr[ d_all_selected$survey_year == "SPHC-B 2021" ] ) ) # TRUE
 
 
 ##### merge data #####
@@ -1692,35 +1692,32 @@ table_cs <- pooled_sample_cs %>%
   group_by( sample_year ) %>%
   summarise(
     
-    N = n(),
+    N = format( n(), big.mark = "," ),
     
     `Age, mean (SD)` =
       paste0(
-        round( mean( age ), 1 ),
+        sprintf( "%.1f", mean( age ) ),
         " (",
-        round( sd( age ), 1 ),
-        ")"
-      ),
+        sprintf( "%.1f", sd( age ) ),
+        ")" ),
     
     `Female, %` =
-      round( mean( sex == "Female" ) * 100, 1 ),
+      sprintf( "%.1f", mean( sex == "Female" ) * 100 ),
     
     `Born outside Sweden, %` =
-      round( mean( country_of_birth != "Sweden" ) * 100, 1 ),
+      sprintf( "%.1f", mean( country_of_birth != "Sweden" ) * 100 ),
     
     `Homosexual, %` =
-      round( mean( sexual_identity_baseline == "Homosexual",
-                   na.rm = TRUE ) * 100, 1 ),
+      sprintf( "%.1f", mean( sexual_identity_baseline == "Homosexual", na.rm = TRUE ) * 100 ),
     
     `Bisexual, %` =
-      round( mean( sexual_identity_baseline == "Bisexual",
-                   na.rm = TRUE ) * 100, 1 ),
+      sprintf( "%.1f", mean( sexual_identity_baseline == "Bisexual", na.rm = TRUE ) * 100 ),
     
-    `Missing sexual identity, %` =
-      round( mean( is.na( sexual_identity_baseline ) ) * 100, 1 )
-  )
+    `Participants from SPHC-B 2021, %` =
+      sprintf( "%.1f", mean( survey_year == "SPHC-B 2021" ) * 100 )
+    )
 
-table_cs
+write_xlsx( table_cs, "results_output/plots_general/table_cs.xlsx" )
 ```
 
 #### 4.2. Plot samples
@@ -2176,14 +2173,14 @@ outcome_list_2 <- list(
 ########## Prevalence ##########
 
 # by sexual identity
-results_list_1 <- cal_prev_poo_cc( year_start = 2001, 
-                                   year_end = 2021,
+results_list_1 <- cal_prev_poo_cc( year_start = 2003, 
+                                   year_end = 2019,
                                    data = pooled_sample_cs_final,
                                    year_var = "sample_year",
                                    variables_list = outcome_list_1,
                                    group_var = "sexual_identity_baseline" )
 
-results_list_2 <- cal_prev_poo_cc( year_start = 2005, 
+results_list_2 <- cal_prev_poo_cc( year_start = 2006, 
                                    year_end = 2021,
                                    data = pooled_sample_cs_final,
                                    year_var = "sample_year",
@@ -2195,15 +2192,15 @@ prevalence_poo <- bind_rows( bind_rows( results_list_1 ),
 writexl::write_xlsx( prevalence_poo, "results_output/results_cc/prevalence_poo_cs_cc.xlsx" )
 
 # by sex
-results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2001, 
-                                          year_end = 2021,
+results_list_by_sex_1 <- cal_prev_poo_cc( year_start = 2003, 
+                                          year_end = 2019,
                                           data = pooled_sample_cs_final,
                                           year_var = "sample_year",
                                           variables_list = outcome_list_1,
                                           group_var = "sexual_identity_baseline + sex",
                                           subgroup = TRUE )
 
-results_list_by_sex_2 <- cal_prev_poo_cc( year_start = 2005, 
+results_list_by_sex_2 <- cal_prev_poo_cc( year_start = 2006, 
                                           year_end = 2021,
                                           data = pooled_sample_cs_final,
                                           year_var = "sample_year",
@@ -2221,8 +2218,8 @@ writexl::write_xlsx( prevalence_poo_by_sex, "results_output/results_cc/prevalenc
 str( pooled_sample_cs_final )
 
 # crude analysis
-pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2001,
-                                         year_end = 2021,
+pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2003,
+                                         year_end = 2019,
                                          data = pooled_sample_cs_final %>%
                                            mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                    anxiety = ifelse( anxiety == "Yes", 1, 0 ),
@@ -2231,7 +2228,7 @@ pr_models_list_crude_1 <- cal_pr_poo_cc( year_start = 2001,
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_1 )
 
-pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2005,
+pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2006,
                                          year_end = 2021,
                                          data = pooled_sample_cs_final %>%
                                            mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
@@ -2241,8 +2238,8 @@ pr_models_list_crude_2 <- cal_pr_poo_cc( year_start = 2005,
                                          outcome_list = outcome_list_2 )
 
 # adjusted analysis
-pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2001,
-                                            year_end = 2021,
+pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2003,
+                                            year_end = 2019,
                                             data = pooled_sample_cs_final %>%
                                               mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                       anxiety = ifelse( anxiety == "Yes", 1, 0 ),
@@ -2252,7 +2249,7 @@ pr_models_list_adjusted_1 <- cal_pr_poo_cc( year_start = 2001,
                                             outcome_list = outcome_list_1,
                                             covariates = "age + sex + country_of_birth" )
 
-pr_models_list_adjusted_2 <- cal_pr_poo_cc( year_start = 2005,
+pr_models_list_adjusted_2 <- cal_pr_poo_cc( year_start = 2006,
                                             year_end = 2021,
                                             data = pooled_sample_cs_final %>%
                                               mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
@@ -2290,8 +2287,8 @@ writexl::write_xlsx( pr_poo_cc, "results_output/results_cc/pr_poo_cs_cc.xlsx" )
 ########## Prevalence Difference ##########
 
 # crude analysis
-pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2001,
-                                         year_end = 2021,
+pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2003,
+                                         year_end = 2019,
                                          data = pooled_sample_cs_final %>%
                                            mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                    anxiety = ifelse( anxiety == "Yes", 1, 0 ),
@@ -2300,7 +2297,7 @@ pd_models_list_crude_1 <- cal_pd_poo_cc( year_start = 2001,
                                          exposure = "sexual_identity_baseline",
                                          outcome_list = outcome_list_1 )
 
-pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2005,
+pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2006,
                                          year_end = 2021,
                                          data = pooled_sample_cs_final %>%
                                            mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
@@ -2310,8 +2307,8 @@ pd_models_list_crude_2 <- cal_pd_poo_cc( year_start = 2005,
                                          outcome_list = outcome_list_2 )
 
 # adjusted analysis
-pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2001,
-                                            year_end = 2021,
+pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2003,
+                                            year_end = 2019,
                                             data = pooled_sample_cs_final %>%
                                               mutate( depression = ifelse( depression == "Yes", 1, 0 ),
                                                       anxiety = ifelse( anxiety == "Yes", 1, 0 ),
@@ -2321,7 +2318,7 @@ pd_models_list_adjusted_1 <- cal_pd_poo_cc( year_start = 2001,
                                             outcome_list = outcome_list_1,
                                             covariates = "age + sex + country_of_birth" )
 
-pd_models_list_adjusted_2 <- cal_pd_poo_cc( year_start = 2005,
+pd_models_list_adjusted_2 <- cal_pd_poo_cc( year_start = 2006,
                                             year_end = 2021,
                                             data = pooled_sample_cs_final %>%
                                               mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
@@ -2476,8 +2473,8 @@ table_co <- pooled_sample_co_final %>%
     `Bisexual, %` =
       sprintf( "%.1f", mean( sexual_identity_baseline == "Bisexual" ) * 100 ),
     
-    `Participants from SPHC 2021, %` =
-      sprintf( "%.1f", mean( survey_year == "SPHC 2021" ) * 100 )
+    `Participants from SPHC-B 2021, %` =
+      sprintf( "%.1f", mean( survey_year == "SPHC-B 2021" ) * 100 )
     )
 
 write_xlsx( table_co, "results_output/plots_general/table_co.xlsx" )
