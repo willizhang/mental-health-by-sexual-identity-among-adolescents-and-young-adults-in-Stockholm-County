@@ -55,7 +55,7 @@ length( intersect( d_2010_young$lopnr, d_2014_young$lopnr ) ) # 0
 length( Reduce( intersect, list( d_2002_young$lopnr, d_2006_young$lopnr, d_2014_young$lopnr ) ) ) # 0
 
 # make characteristics table by sexual identity
-explanatory =  c( "age", "sex", "country_of_birth", "education" )
+explanatory =  c( "age", "sex", "country_of_birth", "education", "survey_year" )
 dependent = "sexual_identity"
 
 d_poo_table <- d_pooled_cha %>% 

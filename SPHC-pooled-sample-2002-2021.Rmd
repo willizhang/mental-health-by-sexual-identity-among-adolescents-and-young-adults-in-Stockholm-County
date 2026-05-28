@@ -1745,7 +1745,7 @@ p_pooled_sample_cs <- ggplot(
   scale_x_continuous(
     limits = c( 2001, 2021 ),
     breaks = seq( 2001, 2021, 4 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+    expand = expansion( mult = c( 0.07, 0.05 ) ) ) +
   
   scale_color_manual( values = c(
     "Heterosexual" = "#F8766D",
@@ -1775,7 +1775,7 @@ p_pooled_sample_cs <- ggplot(
     identity_group == "Heterosexual" ~ scale_y_continuous( limits = c( 4000, 22000 ), breaks = c( seq( 4000, 22000, 2000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ),
     identity_group == "Sexual Minority or Missing" ~ scale_y_continuous( limits = c( 0, 4500 ), breaks = c( seq( 0, 4500, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
   
-  coord_capped_cart( left = "top", bottom = 'right', gap = 0 )
+  coord_capped_cart( left = "both", bottom = "both" )
 
 p_pooled_sample_cs
 ggsave( "results_output/plots_general/p_pooled_sample_cs.svg", plot = p_pooled_sample_cs, width = 11, height = 6 )
