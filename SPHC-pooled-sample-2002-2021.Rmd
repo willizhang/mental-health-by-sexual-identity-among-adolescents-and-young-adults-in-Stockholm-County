@@ -1620,7 +1620,7 @@ atc_all_summary <- atc_all %>%
 summary( atc_all_summary )
 ```
 
-### 4. Series of Cross-Sectional Analysis
+### 4. Year-Specific Cross-Sectional Analyses
 #### 4.1. Construct study samples
 ```{r}
 # include death dates
@@ -2283,6 +2283,159 @@ pr_adjusted_cc_2 <- extract_pr_cc(
 pr_poo_cc <- bind_rows( pr_crude_cc_1, pr_crude_cc_2, pr_adjusted_cc_1, pr_adjusted_cc_2 )
 writexl::write_xlsx( pr_poo_cc, "results_output/results_cc/pr_poo_cs_cc.xlsx" )
 
+### among MALES ###
+# crude analysis
+pr_male_models_list_crude_1 <- cal_pr_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1 )
+
+pr_male_models_list_crude_2 <- cal_pr_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pr_male_models_list_adjusted_1 <- cal_pr_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1,
+  covariates = "age + country_of_birth" )
+
+pr_male_models_list_adjusted_2 <- cal_pr_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2,
+  covariates = "age + country_of_birth" )
+
+
+pr_male_crude_cc_1 <- extract_pr_cc(
+  model_list = pr_male_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_male_crude_cc_2 <- extract_pr_cc(
+  model_list = pr_male_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_male_adjusted_cc_1 <- extract_pr_cc(
+  model_list = pr_male_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_male_adjusted_cc_2 <- extract_pr_cc(
+  model_list = pr_male_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_male_poo_cc <- bind_rows( pr_male_crude_cc_1, pr_male_crude_cc_2, pr_male_adjusted_cc_1, pr_male_adjusted_cc_2 ) %>%
+  mutate( sex = "Male" )
+writexl::write_xlsx( pr_male_poo_cc, "results_output/results_cc/pr_male_poo_cs_cc.xlsx" )
+
+
+### among FEMALES ###
+# crude analysis
+pr_female_models_list_crude_1 <- cal_pr_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1 )
+
+pr_female_models_list_crude_2 <- cal_pr_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pr_female_models_list_adjusted_1 <- cal_pr_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1,
+  covariates = "age + country_of_birth" )
+
+pr_female_models_list_adjusted_2 <- cal_pr_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2,
+  covariates = "age + country_of_birth" )
+
+
+pr_female_crude_cc_1 <- extract_pr_cc(
+  model_list = pr_female_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_female_crude_cc_2 <- extract_pr_cc(
+  model_list = pr_female_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pr_female_adjusted_cc_1 <- extract_pr_cc(
+  model_list = pr_female_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_female_adjusted_cc_2 <- extract_pr_cc(
+  model_list = pr_female_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pr_female_poo_cc <- bind_rows( pr_female_crude_cc_1, pr_female_crude_cc_2, pr_female_adjusted_cc_1, pr_female_adjusted_cc_2 ) %>%
+  mutate( sex = "Female" )
+writexl::write_xlsx( pr_female_poo_cc, "results_output/results_cc/pr_female_poo_cs_cc.xlsx" )
+
 
 ########## Prevalence Difference ##########
 
@@ -2351,9 +2504,162 @@ pd_adjusted_cc_2 <- extract_pd_cc(
 
 pd_poo_cc <- bind_rows( pd_crude_cc_1, pd_crude_cc_2, pd_adjusted_cc_1, pd_adjusted_cc_2 )
 writexl::write_xlsx( pd_poo_cc, "results_output/results_cc/pd_poo_cs_cc.xlsx" )
+
+### among MALES ###
+# crude analysis
+pd_male_models_list_crude_1 <- cal_pd_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1 )
+
+pd_male_models_list_crude_2 <- cal_pd_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pd_male_models_list_adjusted_1 <- cal_pd_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1,
+  covariates = "age + country_of_birth" )
+
+pd_male_models_list_adjusted_2 <- cal_pd_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Male" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2,
+  covariates = "age + country_of_birth" )
+
+
+pd_male_crude_cc_1 <- extract_pd_cc(
+  model_list = pd_male_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_male_crude_cc_2 <- extract_pd_cc(
+  model_list = pd_male_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_male_adjusted_cc_1 <- extract_pd_cc(
+  model_list = pd_male_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_male_adjusted_cc_2 <- extract_pd_cc(
+  model_list = pd_male_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_male_poo_cc <- bind_rows( pd_male_crude_cc_1, pd_male_crude_cc_2, pd_male_adjusted_cc_1, pd_male_adjusted_cc_2 ) %>%
+  mutate( sex = "Male" )
+writexl::write_xlsx( pd_male_poo_cc, "results_output/results_cc/pd_male_poo_cs_cc.xlsx" )
+
+
+### among FEMALES ###
+# crude analysis
+pd_female_models_list_crude_1 <- cal_pd_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1 )
+
+pd_female_models_list_crude_2 <- cal_pd_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2 )
+
+# adjusted analysis
+pd_female_models_list_adjusted_1 <- cal_pd_poo_cc( 
+  year_start = 2003,
+  year_end = 2019,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( depression = ifelse( depression == "Yes", 1, 0 ),
+            anxiety = ifelse( anxiety == "Yes", 1, 0 ),
+            stress_related = ifelse( stress_related == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_1,
+  covariates = "age + country_of_birth" )
+
+pd_female_models_list_adjusted_2 <- cal_pd_poo_cc( 
+  year_start = 2006,
+  year_end = 2021,
+  data = pooled_sample_cs_final %>%
+    filter( sex == "Female" ) %>%
+    mutate( used_N06A = ifelse( used_N06A == "Yes", 1, 0 ),
+            used_N05B = ifelse( used_N05B == "Yes", 1, 0 ) ),
+  year_var = "sample_year",
+  exposure = "sexual_identity_baseline",
+  outcome_list = outcome_list_2,
+  covariates = "age + country_of_birth" )
+
+
+pd_female_crude_cc_1 <- extract_pd_cc(
+  model_list = pd_female_models_list_crude_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_female_crude_cc_2 <- extract_pd_cc(
+  model_list = pd_female_models_list_crude_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "crude" )
+
+pd_female_adjusted_cc_1 <- extract_pd_cc(
+  model_list = pd_female_models_list_adjusted_1,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_female_adjusted_cc_2 <- extract_pd_cc(
+  model_list = pd_female_models_list_adjusted_2,
+  exposure_var = "sexual_identity_baseline" ) %>%
+  mutate( model_type = "adjusted" )
+
+pd_female_poo_cc <- bind_rows( pd_female_crude_cc_1, pd_female_crude_cc_2, pd_female_adjusted_cc_1, pd_female_adjusted_cc_2 ) %>%
+  mutate( sex = "Female" )
+writexl::write_xlsx( pd_female_poo_cc, "results_output/results_cc/pd_female_poo_cs_cc.xlsx" )
 ```
 
-### 5. Series of Cohort Analysis
+### 5. Year-Specific Cohort Analyses
 #### 5.1. Construct study samples
 ```{r}
 # include death dates
