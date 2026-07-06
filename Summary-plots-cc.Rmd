@@ -23,6 +23,7 @@ library(ggh4x)
 library(scales)
 library(lemon)
 library(stringr)
+library(patchwork)
 
 # fixed year color mapping (2001-2021)
 all_years <- 2001:2021
@@ -872,7 +873,7 @@ p_pr_pd_by_sex
 ggsave( "results_output/plots_cc/p_pr_pd_suicide_attempts_by_sex_cc.svg", plot = p_pr_pd_by_sex, width = 9, height = 7.5 )
 ```
 
-### 3. Register-Based Outcomes
+### 3. Register-Based Outcomes (Individual Survey Samples + Year-Specific Cross-Sectional Samples)
 #### 3.1. Annual prevalence
 ##### 3.1.1. By sexual identity
 ###### 3.1.1.1. Prepare data
@@ -2251,7 +2252,7 @@ p_pr_pd_by_sex
 ggsave( "results_output/plots_cc/p_pr_pd_antidepressant_by_sex_cc.svg", plot = p_pr_pd_by_sex, width = 9, height = 7.5 )
 ```
 
-### 4. Year-Specific Chort Analyses
+### 4. Year-Specific Cohort Analyses
 #### 4.1. Annual prevalence
 ##### 4.1.1. By sexual identity
 ###### 4.1.1.1. Prepare data
@@ -2274,16 +2275,6 @@ plot_co_data_cc <- ann_prevalence_poo_co_cc %>%
 
 summary( plot_co_data_cc )
 
-# plot_co_data_cc <- plot_co_data_cc %>%
-#   mutate(
-#     segment = case_when(
-#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
-#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
-#       outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
-#       TRUE ~ "complete"
-#     )
-#   )
-
 vline_data <- data.frame(
   year = 2009, # May 1, 2009
   label = "Marriage Equality",
@@ -2305,20 +2296,12 @@ plot_co_data_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
-    filter( outcome == "antidepressant_use" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "antidepressant_use",
+            cohort_year >= 2006 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2006, 2021 ),
@@ -2334,8 +2317,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2355,25 +2338,26 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data,
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data,
-    aes( x = year, y = 0.15, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+# +
+#   
+#   geom_vline(
+#     data = vline_data,
+#     aes( xintercept = year ),
+#     linetype = "dashed",
+#     color = "grey20",
+#     linewidth = 0.4 ) +
+#   
+#   geom_text(
+#     data = vline_data,
+#     aes( x = year, y = 0.15, label = label ),
+#     angle = 90,
+#     nudge_x = -0.7,
+#     nudge_y = 0.05,
+#     size = 11 / .pt,
+#     family = "Arial",
+#     color = "grey20",
+#     inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 #   
@@ -2407,20 +2391,12 @@ plot_co_data_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
-    filter( outcome == "anxiolytic_use" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "anxiolytic_use",
+            cohort_year >= 2006 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2006, 2021 ),
@@ -2436,8 +2412,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2457,25 +2433,26 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data,
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data,
-    aes( x = year, y = 0.06, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+# +
+#   
+#   geom_vline(
+#     data = vline_data,
+#     aes( xintercept = year ),
+#     linetype = "dashed",
+#     color = "grey20",
+#     linewidth = 0.4 ) +
+#   
+#   geom_text(
+#     data = vline_data,
+#     aes( x = year, y = 0.06, label = label ),
+#     angle = 90,
+#     nudge_x = -0.7,
+#     nudge_y = 0.05,
+#     size = 11 / .pt,
+#     family = "Arial",
+#     color = "grey20",
+#     inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 #   
@@ -2509,20 +2486,12 @@ plot_co_data_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
-    filter( outcome == "depression" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "depression",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
     
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -2538,8 +2507,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2559,25 +2528,26 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data,
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data,
-    aes( x = year, y = 0.03, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+# +
+#   
+#   geom_vline(
+#     data = vline_data,
+#     aes( xintercept = year ),
+#     linetype = "dashed",
+#     color = "grey20",
+#     linewidth = 0.4 ) +
+#   
+#   geom_text(
+#     data = vline_data,
+#     aes( x = year, y = 0.03, label = label ),
+#     angle = 90,
+#     nudge_x = -0.7,
+#     nudge_y = 0.05,
+#     size = 11 / .pt,
+#     family = "Arial",
+#     color = "grey20",
+#     inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 #   
@@ -2611,20 +2581,12 @@ plot_co_data_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
-    filter( outcome == "anxiety" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "anxiety",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
     
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -2640,8 +2602,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2661,25 +2623,26 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data,
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data,
-    aes( x = year, y = 0.05, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+# +
+#   
+#   geom_vline(
+#     data = vline_data,
+#     aes( xintercept = year ),
+#     linetype = "dashed",
+#     color = "grey20",
+#     linewidth = 0.4 ) +
+#   
+#   geom_text(
+#     data = vline_data,
+#     aes( x = year, y = 0.05, label = label ),
+#     angle = 90,
+#     nudge_x = -0.7,
+#     nudge_y = 0.05,
+#     size = 11 / .pt,
+#     family = "Arial",
+#     color = "grey20",
+#     inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 #   
@@ -2713,20 +2676,12 @@ plot_co_data_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_cc %>%
-    filter( outcome == "stress_related" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "stress_related",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +  
     
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -2742,8 +2697,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2763,25 +2718,26 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data,
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data,
-    aes( x = year, y = 0.01, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+# +
+#   
+#   geom_vline(
+#     data = vline_data,
+#     aes( xintercept = year ),
+#     linetype = "dashed",
+#     color = "grey20",
+#     linewidth = 0.4 ) +
+#   
+#   geom_text(
+#     data = vline_data,
+#     aes( x = year, y = 0.01, label = label ),
+#     angle = 90,
+#     nudge_x = -0.7,
+#     nudge_y = 0.05,
+#     size = 11 / .pt,
+#     family = "Arial",
+#     color = "grey20",
+#     inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 #   
@@ -2829,21 +2785,11 @@ plot_co_data_by_sex_cc <- ann_prevalence_poo_co_by_sex_cc %>%
 
 summary( plot_co_data_by_sex_cc )
 
-# plot_co_data_by_sex_cc <- plot_co_data_by_sex_cc %>%
-#   mutate(
-#     segment = case_when(
-#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year <= 2002 ~ "incomplete_1",
-#       outcome %in% c( "depression", "anxiety", "stress_related" ) & year >= 2020 ~ "incomplete_2",
-#       outcome %in% c( "antidepressant_use", "anxiolytic_use" ) & year == 2005 ~ "incomplete_3",
-#       TRUE ~ "complete"
-#     )
-#   )
-
-vline_data <- data.frame(
-  year = 2009, # May 1, 2009
-  label = "Marriage Equality",
-  sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
-                                     levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
+# vline_data <- data.frame(
+#   year = 2009, # May 1, 2009
+#   label = "Marriage Equality",
+#   sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
+#                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
 
 # vline_data_covid <- data.frame(
 #   year = 2020, # March 2020
@@ -2860,20 +2806,12 @@ plot_co_data_by_sex_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
-    filter( outcome == "antidepressant_use" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "antidepressant_use",
+            cohort_year >= 2006 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2006, 2021 ),
@@ -2889,8 +2827,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -2911,27 +2849,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( x = year, y = 0.15, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( x = year, y = 0.15, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 # 
@@ -2967,20 +2905,12 @@ plot_co_data_by_sex_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
-    filter( outcome == "anxiolytic_use" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "anxiolytic_use",
+            cohort_year >= 2006 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2006, 2021 ),
@@ -2996,8 +2926,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3018,27 +2948,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( x = year, y = 0.06, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( x = year, y = 0.06, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 # p_prevalence <- p_prevalence +
 # 
@@ -3074,20 +3004,12 @@ plot_co_data_by_sex_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
-    filter( outcome == "depression" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "depression",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -3103,8 +3025,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3125,27 +3047,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( x = year, y = 0.03, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( x = year, y = 0.03, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_prevalence_poo_co_depression_by_sex_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -3159,20 +3081,12 @@ plot_co_data_by_sex_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
-    filter( outcome == "anxiety" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "anxiety",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -3188,8 +3102,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3210,27 +3124,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
-  
-  geom_vline(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( x = year, y = 0.03, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  coord_capped_cart( left = 'both', bottom = 'both' )
+  # 
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( x = year, y = 0.03, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_prevalence_poo_co_anxiety_by_sex_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -3244,20 +3158,12 @@ plot_co_data_by_sex_cc %>%
 
 p_prevalence <- ggplot( 
   plot_co_data_by_sex_cc %>%
-    filter( outcome == "stress_related" ),
-  # aes( x = year, y = point_estimate, color = cohort_year, linetype = segment, group = interaction( cohort_year, segment ) ) ) +
+    filter( outcome == "stress_related",
+            cohort_year >= 2003 ),
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
-  
-  # scale_linetype_manual( 
-  #   values = c( 
-  #     "complete" = "solid",
-  #     "incomplete_1" = "solid",
-  #     "incomplete_2" = "solid",
-  #     "incomplete_3" = "solid" ),
-  #   guide = "none" ) +
   
   scale_x_continuous(
     limits = c( 2003, 2019 ),
@@ -3273,8 +3179,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3295,27 +3201,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
   
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( sex = "Male" ),
-    aes( x = year, y = 0.03, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( sex = "Male" ),
+  #   aes( x = year, y = 0.03, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_prevalence_poo_co_stress_by_sex_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -3352,7 +3258,8 @@ plot_co_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence %>%
-    filter( outcome == "antidepressant_use" ),
+    filter( outcome == "antidepressant_use",
+            cohort_year >= 2006 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3372,8 +3279,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3407,7 +3314,8 @@ plot_co_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence %>%
-    filter( outcome == "anxiolytic_use" ),
+    filter( outcome == "anxiolytic_use",
+            cohort_year >= 2006 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3427,8 +3335,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3462,7 +3370,8 @@ plot_co_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence %>%
-    filter( outcome == "depression" ),
+    filter( outcome == "depression",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3482,8 +3391,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3517,7 +3426,8 @@ plot_co_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence %>%
-    filter( outcome == "anxiety" ),
+    filter( outcome == "anxiety",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3537,8 +3447,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3572,7 +3482,8 @@ plot_co_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence %>%
-    filter( outcome == "stress_related" ),
+    filter( outcome == "stress_related",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3592,8 +3503,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3650,7 +3561,8 @@ plot_co_cum_prevalence_by_sex %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence_by_sex %>%
-    filter( outcome == "antidepressant_use" ),
+    filter( outcome == "antidepressant_use",
+            cohort_year >= 2006 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3670,8 +3582,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3706,7 +3618,8 @@ plot_co_cum_prevalence_by_sex %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence_by_sex %>%
-    filter( outcome == "anxiolytic_use" ),
+    filter( outcome == "anxiolytic_use",
+            cohort_year >= 2006 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3726,8 +3639,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3762,7 +3675,8 @@ plot_co_cum_prevalence_by_sex %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence_by_sex %>%
-    filter( outcome == "depression" ),
+    filter( outcome == "depression",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3782,8 +3696,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3818,7 +3732,8 @@ plot_co_cum_prevalence_by_sex %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence_by_sex %>%
-    filter( outcome == "anxiety" ),
+    filter( outcome == "anxiety",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3838,8 +3753,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3874,7 +3789,8 @@ plot_co_cum_prevalence_by_sex %>%
 
 p_prevalence <- ggplot( 
   plot_co_cum_prevalence_by_sex %>%
-    filter( outcome == "stress_related" ),
+    filter( outcome == "stress_related",
+            cohort_year >= 2003 ),
   aes( x = cum_year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
   geom_line( linewidth = 0.8 ) +
@@ -3894,8 +3810,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -3977,11 +3893,39 @@ plot_co_ann_cum_prevalence <- bind_rows(
 
 summary( plot_co_ann_cum_prevalence )
 
-vline_data <- data.frame(
-  year = 2009, # May 1, 2009
-  label = "Marriage Equality",
-  sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
-                                     levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
+# vline_data <- data.frame(
+#   year = 2009, # May 1, 2009
+#   label = "Marriage Equality",
+#   sexual_identity_baseline = factor( c( "Bisexual", "Homosexual" ),
+#                                      levels = c( "Heterosexual", "Bisexual", "Homosexual" ) ) )
+
+
+# double check whether first-year annual and cumulative prevalence is exactly the same
+plot_co_ann_cum_prevalence %>%
+  filter( outcome == "antidepressant_use" ) %>%
+  filter(
+    year == if_else( cohort_year <= 2006, 2006, cohort_year ) 
+    ) %>%
+  select(
+    cohort_year,
+    year,
+    sexual_identity_baseline,
+    type,
+    point_estimate,
+    lower_ci,
+    upper_ci
+    ) %>%
+  tidyr::pivot_wider(
+    names_from = type,
+    values_from = c( point_estimate, lower_ci, upper_ci )
+    ) %>%
+  mutate(
+    identical_all =
+      point_estimate_annual == point_estimate_cumulative &
+      lower_ci_annual == lower_ci_cumulative &
+      upper_ci_annual == upper_ci_cumulative
+    ) %>%
+  count( identical_all )
 ```
 
 ###### 4.3.1.2. Antidepressant use
@@ -3998,7 +3942,8 @@ plot_co_ann_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_ann_cum_prevalence %>%
-    filter( outcome %in% c( "antidepressant_use" ) ),
+    filter( outcome %in% c( "antidepressant_use" ),
+            cohort_year >= 2006 ),
   
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
@@ -4013,8 +3958,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -4051,27 +3996,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
 
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( x = year, y = 0.17, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( x = year, y = 0.17, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_antidepressant_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -4091,7 +4036,8 @@ plot_co_ann_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_ann_cum_prevalence %>%
-    filter( outcome %in% c( "anxiolytic_use" ) ),
+    filter( outcome %in% c( "anxiolytic_use" ),
+            cohort_year >= 2006 ),
   
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
@@ -4106,8 +4052,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2021 ),
-    breaks = c( 2002, 2011, 2020 ) ) +
+    limits = c( 2006, 2021 ),
+    breaks = c( 2007, 2013, 2020 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -4144,27 +4090,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
 
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( x = year, y = 0.06, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( x = year, y = 0.06, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_anxiolytic_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -4184,7 +4130,8 @@ plot_co_ann_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_ann_cum_prevalence %>%
-    filter( outcome %in% c( "depression" ) ),
+    filter( outcome %in% c( "depression" ),
+            cohort_year >= 2003 ),
   
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
@@ -4199,8 +4146,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -4237,27 +4184,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
 
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( x = year, y = -0.033, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( x = year, y = -0.033, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_depression_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -4277,7 +4224,8 @@ plot_co_ann_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_ann_cum_prevalence %>%
-    filter( outcome %in% c( "anxiety" ) ),
+    filter( outcome %in% c( "anxiety" ),
+            cohort_year >= 2003 ),
   
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
@@ -4292,8 +4240,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -4330,27 +4278,27 @@ p_prevalence <- ggplot(
     legend.position = "right" )
 
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( x = year, y = 0.05, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( x = year, y = 0.05, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_anxiety_cc.svg", plot = p_prevalence, width = 14, height = 7 )
@@ -4370,7 +4318,8 @@ plot_co_ann_cum_prevalence %>%
 
 p_prevalence <- ggplot( 
   plot_co_ann_cum_prevalence %>%
-    filter( outcome %in% c( "stress_related" ) ),
+    filter( outcome %in% c( "stress_related" ),
+            cohort_year >= 2003 ),
   
   aes( x = year, y = point_estimate, color = cohort_year, group = cohort_year ) ) +
   
@@ -4385,8 +4334,8 @@ p_prevalence <- ggplot(
   scale_color_gradientn(
     colours = colorRampPalette( viridis::viridis( 21, option = "turbo" )[ 3:20 ] )( 100 ),
     name = "Cohort Year",
-    limits = c( 2001, 2019 ),
-    breaks = c( 2002, 2010, 2018 ) ) +
+    limits = c( 2003, 2019 ),
+    breaks = c( 2004, 2011, 2018 ) ) +
   
   labs(
     x = "Calendar Year",
@@ -4423,28 +4372,341 @@ p_prevalence <- ggplot(
     legend.position = "right" )
 
 p_prevalence <- p_prevalence +
-  coord_capped_cart( left = 'both', bottom = 'both' ) +
+  coord_capped_cart( left = 'both', bottom = 'both' )
   
-  geom_vline(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( xintercept = year ),
-    linetype = "dashed",
-    color = "grey20",
-    linewidth = 0.4 ) +
-  
-  geom_text(
-    data = vline_data %>%
-      mutate( type = "annual" ),
-    aes( x = year, y = 0.01, label = label ),
-    angle = 90,
-    nudge_x = -0.7,
-    nudge_y = 0.05,
-    size = 11 / .pt,
-    family = "Arial",
-    color = "grey20",
-    inherit.aes = FALSE )
+  # geom_vline(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( xintercept = year ),
+  #   linetype = "dashed",
+  #   color = "grey20",
+  #   linewidth = 0.4 ) +
+  # 
+  # geom_text(
+  #   data = vline_data %>%
+  #     mutate( type = "annual" ),
+  #   aes( x = year, y = 0.01, label = label ),
+  #   angle = 90,
+  #   nudge_x = -0.7,
+  #   nudge_y = 0.05,
+  #   size = 11 / .pt,
+  #   family = "Arial",
+  #   color = "grey20",
+  #   inherit.aes = FALSE )
 
 p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_stress_cc.svg", plot = p_prevalence, width = 14, height = 7 )
+```
+
+##### 4.3.2. Plot two earliest cohorts
+###### 4.3.2.1. Prepare data
+```{r}
+# annual prevalence
+ann_prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/ann_prevalence_poo_co_cc.xlsx" ) )
+summary( ann_prevalence_poo_co_cc )
+unique( ann_prevalence_poo_co_cc$sexual_identity_baseline )
+
+plot_co_data_cc <- ann_prevalence_poo_co_cc %>%
+  filter(
+    sexual_identity_baseline %in% c( "Heterosexual", "Homosexual", "Bisexual" )
+    ) %>%
+  mutate(
+    sexual_identity_baseline = factor(
+      sexual_identity_baseline,
+      levels = c( "Heterosexual", "Homosexual", "Bisexual" )
+      ),
+    outcome = as.factor( outcome )
+    )
+
+summary( plot_co_data_cc )
+
+# cumulative prevalence
+cum_prevalence_poo_co_cc <- read_xlsx( here( "results_output/results_cc/cum_prevalence_poo_co_cc.xlsx" ) )
+summary( cum_prevalence_poo_co_cc )
+unique( cum_prevalence_poo_co_cc$sexual_identity_baseline )
+
+plot_co_cum_prevalence <- cum_prevalence_poo_co_cc %>%
+  filter(
+    sexual_identity_baseline %in% c( "Heterosexual", "Homosexual", "Bisexual" )
+    ) %>%
+  mutate(
+    sexual_identity_baseline = factor(
+      sexual_identity_baseline,
+      levels = c( "Heterosexual", "Homosexual", "Bisexual" )
+      ),
+    outcome = as.factor( outcome )
+    )
+
+summary( plot_co_cum_prevalence )
+
+# merge data
+plot_co_ann_cum_prevalence <- bind_rows(
+  plot_co_data_cc %>%
+    mutate( type = "annual" ),
+  
+  plot_co_cum_prevalence %>%
+    rename( year = cum_year ) %>%
+    mutate( type = "cumulative" )
+  ) %>%
+  mutate( type = as.factor( type ) )
+
+summary( plot_co_ann_cum_prevalence )
+
+plot_co_single_cohort <- plot_co_ann_cum_prevalence %>%
+  filter( cohort_year == 2006 ) %>%
+  mutate(
+    outcome = factor(
+      outcome,
+      levels = c(
+        "depression", "anxiety", "stress_related",
+        "antidepressant_use", "anxiolytic_use"
+        ),
+      labels = c(
+        "Depression", "Anxiety Disorders", "Stress-Related Disorders",
+        "Antidepressant Use", "Anxiolytic Use"
+        )
+      ),
+    
+    type = factor(
+      type,
+      levels = c( "annual", "cumulative" ),
+      labels = c( "Annual", "Cumulative" )
+      )
+    )
+
+summary( plot_co_single_cohort )
+```
+
+###### 4.3.2.2. Diagnosis
+```{r}
+plot_diag <- plot_co_single_cohort %>%
+  filter( outcome %in% c(
+    "Depression",
+    "Anxiety Disorders",
+    "Stress-Related Disorders"
+    ) )
+
+plot_diag %>%
+  group_by( outcome ) %>%
+  summarise(
+    min = min( point_estimate ),
+    max = max( point_estimate )
+  )
+
+p_diag <- ggplot(
+  plot_diag,
+  
+  aes(
+    x = year,
+    y = point_estimate,
+    color = sexual_identity_baseline,
+    linetype = type,
+    group = interaction( sexual_identity_baseline, type )
+    ) 
+  ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" ) 
+    ) +
+  
+  scale_linetype_manual(
+    values = c( "Annual" = "dotted", 
+                "Cumulative" = "solid" )
+    ) +
+  
+  scale_x_continuous(
+    limits = c( 2006, 2019 ),
+    breaks = c( seq( 2006, 2015, by = 3 ), 2019 ),
+    expand = expansion( mult = c( 0.05, 0.02 ) )
+    ) +
+  
+  labs(
+    x = "Calendar Year",
+    y = "Prevalence",
+    color = NULL,
+    linetype = NULL
+    ) +
+  
+  facet_wrap( ~ outcome, 
+              ncol = 1,
+              scales = "free_y" ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "Depression" ~ scale_y_continuous( 
+      limits = c( 0, 0.6 ),
+      breaks = c( seq( 0, 0.6, 0.15 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Anxiety Disorders" ~ scale_y_continuous( 
+      limits = c( 0, 0.4 ),
+      breaks = c( seq( 0, 0.4, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Stress-Related Disorders" ~ scale_y_continuous( 
+      limits = c( 0, 0.3 ),
+      breaks = c( seq( 0, 0.3, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_diag
+# ggsave(
+#   "results_output/plots_cc/p_ann_cum_prevalence_poo_co_diag_2006_cc.svg",
+#   plot = p_diag,
+#   width = 7,
+#   height = 9 
+#   )
+```
+
+###### 4.3.2.3. Medication
+```{r}
+plot_med <- plot_co_single_cohort %>%
+  filter( outcome %in% c(
+    "Antidepressant Use",
+    "Anxiolytic Use"
+    ) )
+
+plot_med %>%
+  group_by( outcome ) %>%
+  summarise(
+    min = min( point_estimate ),
+    max = max( point_estimate )
+  )
+
+plot_med$outcome <- factor(
+  plot_med$outcome,
+  levels = c(
+    "Antidepressant Use",
+    "Anxiolytic Use",
+    " "
+    )
+  ) # create place holder
+
+plot_med %>%
+  filter( outcome == " " )
+
+p_med <- ggplot(
+  plot_med,
+  
+  aes(
+    x = year,
+    y = point_estimate,
+    color = sexual_identity_baseline,
+    linetype = type,
+    group = interaction( sexual_identity_baseline, type )
+    ) 
+  ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" ) 
+    ) +
+  
+  scale_linetype_manual(
+    values = c( "Annual" = "dotted", 
+                "Cumulative" = "solid" )
+    ) +
+  
+  scale_x_continuous(
+    limits = c( 2006, 2021 ),
+    breaks = c( seq( 2006, 2021, by = 3 ) ),
+    expand = expansion( mult = c( 0.05, 0.02 ) )
+    ) +
+  
+  labs(
+    x = "Calendar Year",
+    y = NULL,
+    color = NULL,
+    linetype = NULL
+    ) +
+  
+  facet_wrap( ~ outcome, 
+              ncol = 1,
+              scales = "free_y",
+              drop = FALSE,
+              axes = "all_x" ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "Antidepressant Use" ~ scale_y_continuous( 
+      limits = c( 0, 0.6 ),
+      breaks = c( seq( 0, 0.6, 0.15 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Anxiolytic Use" ~ scale_y_continuous( 
+      limits = c( 0, 0.4 ),
+      breaks = c( seq( 0, 0.4, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_med
+# ggsave(
+#   "results_output/plots_cc/p_ann_cum_prevalence_poo_co_med_2006_cc.svg",
+#   plot = p_med,
+#   width = 7,
+#   height = 9
+#   )
+```
+
+###### 4.3.2.4. Merge plot
+```{r}
+p_prevalence <-
+  p_diag +
+  plot_spacer() +
+  p_med +
+  plot_layout(
+    widths = c( 1, 0.08, 1 ),
+    guides = "collect"
+    ) &
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom"
+    )
+
+p_prevalence
+ggsave(
+  "results_output/plots_cc/p_ann_cum_prevalence_poo_co_2006_cc.svg",
+  plot = p_prevalence,
+  width = 12,
+  height = 9
+)
 ```
