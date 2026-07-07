@@ -3838,6 +3838,211 @@ p_prevalence
 ggsave( "results_output/plots_cc/p_cum_prevalence_poo_co_stress_by_sex_cc.svg", plot = p_prevalence, width = 14, height = 7 )
 ```
 
+###### 4.2.2.7. The 2006 cohort
+```{r}
+plot_cum_by_sex_2006 <- plot_co_cum_prevalence_by_sex %>%
+  filter( cohort_year == 2006 ) %>%
+  mutate(
+    outcome = factor(
+      outcome,
+      levels = c(
+        "depression", "anxiety", "stress_related",
+        "antidepressant_use", "anxiolytic_use"
+        ),
+      labels = c(
+        "Depression", "Anxiety Disorders", "Stress-Related Disorders",
+        "Antidepressant Use", "Anxiolytic Use"
+        )
+      )
+    )
+
+summary( plot_cum_by_sex_2006 )
+
+# diagnosis
+plot_cum_diag <- plot_cum_by_sex_2006 %>%
+  filter( outcome %in% c(
+    "Depression",
+    "Anxiety Disorders",
+    "Stress-Related Disorders"
+    ) )
+
+plot_cum_diag %>%
+  group_by( outcome ) %>%
+  summarise(
+    min = min( point_estimate ),
+    max = max( point_estimate )
+  )
+
+p_cum_diag_by_sex <- ggplot(
+  plot_cum_diag,
+  
+  aes(
+    x = cum_year,
+    y = point_estimate,
+    color = sexual_identity_baseline,
+    group = sexual_identity_baseline
+    )
+  ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" 
+      ) 
+    ) +
+  
+  scale_x_continuous(
+    limits = c( 2006, 2019 ),
+    breaks = c( seq( 2006, 2015, by = 3 ), 2019 ),
+    expand = expansion( mult = c( 0.07, 0.05 ) )
+    ) +
+  
+  labs(
+    x = "Calendar Year",
+    y = "Cumulative Prevalence",
+    color = NULL
+    ) +
+  
+  facet_grid(
+    outcome ~ sex,
+    scales = "free_y",
+    switch = "y"
+    ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "Depression" ~ scale_y_continuous( 
+      limits = c( 0, 0.4 ),
+      breaks = c( seq( 0, 0.4, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Anxiety Disorders" ~ scale_y_continuous( 
+      limits = c( 0, 0.4 ),
+      breaks = c( seq( 0, 0.4, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Stress-Related Disorders" ~ scale_y_continuous( 
+      limits = c( 0, 0.4 ),
+      breaks = c( seq( 0, 0.4, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' )
+
+p_cum_diag_by_sex
+ggsave(
+  "results_output/plots_cc/p_cum_prevalence_poo_co_diag_2006_by_sex_cc.svg",
+  plot = p_cum_diag_by_sex,
+  width = 8,
+  height = 8 
+  )
+
+
+# medication
+plot_cum_med <- plot_cum_by_sex_2006 %>%
+  filter( outcome %in% c(
+    "Antidepressant Use", 
+    "Anxiolytic Use"
+  ) )
+
+plot_cum_med %>%
+  group_by( outcome ) %>%
+  summarise(
+    min = min( point_estimate ),
+    max = max( point_estimate )
+  )
+
+p_cum_med_by_sex <- ggplot(
+  plot_cum_med,
+  
+  aes(
+    x = cum_year,
+    y = point_estimate,
+    color = sexual_identity_baseline,
+    group = sexual_identity_baseline
+  )
+) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" 
+    ) 
+  ) +
+  
+  scale_x_continuous(
+    limits = c( 2006, 2021 ),
+    breaks = c( seq( 2006, 2021, by = 3 ) ),
+    expand = expansion( mult = c( 0.07, 0.05 ) )
+  ) +
+  
+  labs(
+    x = "Calendar Year",
+    y = "Cumulative Prevalence",
+    color = NULL
+  ) +
+  
+  facet_grid(
+    outcome ~ sex,
+    scales = "free_y",
+    switch = "y"
+  ) +
+  
+  ggh4x::facetted_pos_scales( y = list(
+    outcome == "Antidepressant Use" ~ scale_y_continuous( 
+      limits = c( 0, 0.6 ),
+      breaks = c( seq( 0, 0.6, 0.15 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ),
+    
+    outcome == "Anxiolytic Use" ~ scale_y_continuous( 
+      limits = c( 0, 0.5 ),
+      breaks = c( seq( 0, 0.5, 0.1 ) ),
+      labels = scales::percent_format( accuracy = 1 ),
+      expand = expansion( mult = c( 0.05, 0.02 ) ) ) ) ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom" ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' )
+
+p_cum_med_by_sex
+ggsave(
+  "results_output/plots_cc/p_cum_prevalence_poo_co_med_2006_by_sex_cc.svg",
+  plot = p_cum_med_by_sex,
+  width = 8,
+  height = 5.7
+)
+```
+
 #### 4.3. Annual and cumulative prevalence
 ##### 4.3.1. By sexual identity
 ###### 4.3.1.1. Prepare data
@@ -4398,7 +4603,7 @@ p_prevalence
 ggsave( "results_output/plots_cc/p_ann_cum_prevalence_poo_co_stress_cc.svg", plot = p_prevalence, width = 14, height = 7 )
 ```
 
-##### 4.3.2. Plot two earliest cohorts
+##### 4.3.2. The 2006 cohort
 ###### 4.3.2.1. Prepare data
 ```{r}
 # annual prevalence
