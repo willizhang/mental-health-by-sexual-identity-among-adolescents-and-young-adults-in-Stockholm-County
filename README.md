@@ -1,6 +1,6 @@
 ### This repository contains the R scripts used for the analyses presented in:
 
-> *Mental health disparities and trajectories by sexual identity among adolescents and young adults in Stockholm County, Sweden, 2002–2021*
+> *Mental Health Disparities and Burden by Sexual Identity Among Adolescents and Young Adults in Stockholm County, Sweden, 2002–2021*
 >
 > **Authors:** Willi Zhang, Per Tynelius, Maya B. Mathur, Anna Mia Ekström, Emma Björkenstam, Kirsty A. Clark, Kyriaki Kosidou
 >
