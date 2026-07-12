@@ -20,8 +20,7 @@ library(lemon)
 library(scales)
 library(naniar)
 library(survey)
-library(jomo)
-library(mitml)
+library(mice)
 library(mitools)
 library(UpSetR)
 library(writexl)
@@ -794,7 +793,7 @@ dates_all %>% filter( lopnr %in% id_move_out_before_sampling ) %>% count( survey
 #  arrange( lopnr, date ) %>%
 #  View()
 
-# plotting
+# plotting by survey
 p_registry_dates <- 
   ggplot( dates_all,
           aes( x = date, y = individual_id, color = event_type ) ) +
@@ -857,6 +856,97 @@ p_registry_dates <-
 p_registry_dates
 ggsave( "results_output/plots_general/registry_dates.svg", plot = p_registry_dates, width = 15, height = 12 )
 ggsave( "results_output/plots_general/registry_dates.png", plot = p_registry_dates, width = 15, height = 12 )
+
+# plotting among pooled sample
+dates_all <- dates_all %>%
+  arrange( lopnr, date ) %>%
+  mutate( individual_id_pooled = dense_rank( lopnr ) )
+max( dates_all$individual_id_pooled ) # 25,158
+
+p_registry_dates_pooled <- 
+  ggplot( dates_all,
+          aes( x = date, y = individual_id_pooled, color = event_type ) ) +
+  
+  geom_point( size = 1.5 ) +
+  
+  scale_color_manual(
+    values = c( "move-in" = "green", "move-out" = "blue", "death" = "red" ),
+    labels = c( "move-in" = "Move to Sweden", "move-out" = "Move outside Sweden", "death" = "Death" ) ) +
+
+  scale_x_date(
+    limits = as.Date( c( "1990-01-01", NA ) ),
+    breaks = seq( as.Date( "1990-01-01" ), as.Date( "2022-01-01" ), by = "4 years" ),
+    date_labels = "%Y",
+    expand = c( 0.02, 0 ) ) +
+  
+  scale_y_continuous(
+    breaks = scales::pretty_breaks( n = 8 ),
+    labels = scales::comma,
+    expand = c( 0.02, 0.02 ) ) +
+  
+  labs( x = "Calendar Year", y = "Number of Participants" ) +
+  
+  theme_classic() +
+  theme(
+    axis.text = element_text( family = "Arial", size = 11 ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ) ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' )
+
+p_registry_dates_pooled
+ggsave( "results_output/plots_general/registry_dates_pooled.svg",
+        plot = p_registry_dates_pooled,
+        width = 15,
+        height = 8 )
+
+# aggregated register events
+registry_counts_year <- dates_all %>%
+  mutate( year = lubridate::year( date ) ) %>%
+  count( year, event_type )
+summary( registry_counts_year )
+
+p_registry_dates_aggregated <- 
+  ggplot( registry_counts_year, 
+          aes( x = year, y = n, color = event_type ) ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 1.2 ) +
+  
+  scale_color_manual(
+    values = c( "move-in" = "green", "move-out" = "blue", "death" = "red" ),
+    labels = c( "move-in" = "Move to Sweden", "move-out" = "Move outside Sweden", "death" = "Death" ) ) +
+  
+  scale_x_continuous(
+    breaks = c( 1990, 1998, 2006, 2014, 2021 ),
+    limits = c( 1990, 2021 ),
+    expand = expansion( mult = c( 0.05, 0.02 ) ) ) +
+  
+  scale_y_continuous(
+    breaks = seq( 0, 1200, 400 ),
+    limits = c( 0, 1200 ),
+    labels = scales::comma,
+    expand = c( 0.05, 0 ) ) +
+  
+  labs( x = "Calendar Year", y = "Number of Events" ) +
+  
+  theme_classic() +
+  theme(
+    axis.text = element_text( family = "Arial", size = 11 ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    legend.position = "right",
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ) ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' )
+
+p_registry_dates_aggregated
+ggsave( "results_output/plots_general/registry_dates_aggregated.svg",
+        plot = p_registry_dates_aggregated,
+        width = 10,
+        height = 5 )
 
 # age at death
 p_death_age_year <- 
@@ -2657,6 +2747,499 @@ pd_female_adjusted_cc_2 <- extract_pd_cc(
 pd_female_poo_cc <- bind_rows( pd_female_crude_cc_1, pd_female_crude_cc_2, pd_female_adjusted_cc_1, pd_female_adjusted_cc_2 ) %>%
   mutate( sex = "Female" )
 writexl::write_xlsx( pd_female_poo_cc, "results_output/results_cc/pd_female_poo_cs_cc.xlsx" )
+```
+
+#### 4.6. MICE
+##### 4.6.1. Psychotropic medication use
+###### 4.6.1.1. Model initialization
+```{r}
+missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2006, sex == "Female" ) )
+
+imp_ini <- mice(
+  pooled_sample_cs_final %>% filter( sample_year == 2006, sex == "Female" ),
+  maxit = 0,
+  printFlag = FALSE )
+
+imp_ini$loggedEvents
+imp_ini$nmis
+imp_ini$method
+
+pred <- imp_ini$predictorMatrix
+pred[ , c( "lopnr" ) ] <- 0
+pred
+
+vis <- imp_ini$vis
+vis <- imp_ini$vis[ c( 1:5, 7, 6, 8:12 ) ]
+vis
+```
+
+###### 4.6.1.2. Imputation example
+```{r}
+# among females
+imp_med_2006_female <- mice( 
+  pooled_sample_cs_final %>% filter( sample_year == 2006, sex == "Female" ),
+  m = 50,
+  maxit = 10,
+  predictorMatrix = pred,
+  visitSequence = vis,
+  seed = 1234,
+  printFlag = FALSE
+  )
+
+plot( imp_med_2006_female )
+
+# among males
+imp_med_2006_male <- mice( 
+  pooled_sample_cs_final %>% filter( sample_year == 2006, sex == "Male" ),
+  m = 50,
+  maxit = 10,
+  predictorMatrix = pred,
+  visitSequence = vis,
+  seed = 1234,
+  printFlag = FALSE
+  )
+
+plot( imp_med_2006_male )
+
+# merge imputed data
+imp_med_2006_all <- rbind( imp_med_2006_female, imp_med_2006_male )
+imp_med_2006_all$method
+imp_med_2006_all$predictorMatrix
+imp_med_2006_all$visitSequence
+
+# visualize the distributions of imputed data 
+com <- complete( imp_med_2006_all, action = "long", include = TRUE )
+
+ggplot( data = com[ !is.na( com$sexual_identity_baseline ), ], # sexual identity  
+       aes( fill = sexual_identity_baseline, x = .imp ) 
+       ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  facet_wrap( ~ sex ) +
+  xlab( "Imputation number" ) + 
+  ylab( "Percentage" ) + 
+  scale_fill_discrete( name = "Sexual Identity" ) + 
+  theme( legend.justification = "bottom" )
+
+ggplot( data = com[ !is.na( com$depression ), ], # depression  
+       aes( fill = depression, x = .imp ) 
+       ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  facet_wrap( ~ sex ) +
+  xlab( "Imputation number" ) + 
+  ylab( "Percentage" ) + 
+  scale_fill_discrete( name = "Depression" ) + 
+  theme( legend.justification = "bottom" )
+
+ggplot( data = com[ !is.na( com$used_N06A ), ], # antidepressant use  
+       aes( fill = used_N06A, x = .imp ) 
+       ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  facet_wrap( ~ sex ) +
+  xlab( "Imputation number" ) + 
+  ylab( "Percentage" ) + 
+  scale_fill_discrete( name = "Antidepressant Use" ) + 
+  theme( legend.justification = "bottom" )
+
+# pooled analysis
+implist_med_2006 <- complete( imp_med_2006_all, action = "all", include = FALSE )
+design_imp_med_2006 <- svydesign( ids = ~ 1, data = imputationList( implist_med_2006 ) ) # survey design
+
+mi_result <- MIcombine(
+  with( design_imp_med_2006,
+        svyby(
+          formula = ~ I( used_N06A == "Yes" ), # use of antidepressants
+          by = ~ sexual_identity_baseline + sex,
+          FUN = svyciprop,
+          method = "beta"
+        )
+      )
+    )
+
+mi_result_summary <- summary( mi_result )
+mi_result_summary
+mi_result_df <- rownames_to_column( mi_result_summary[ , c( "results", "(lower", "upper)" ) ], var = "subgroup" )
+mi_result_df
+mi_result_df <- mi_result_df %>%
+  tidyr::separate(
+    subgroup,
+    into = c( "sexual_identity", "sex" ),
+    sep = "\\.",
+    remove = TRUE )
+
+colnames( mi_result_df )[ -c( 1, 2 ) ] <- c( "point_estimate", "lower_ci", "upper_ci" )
+mi_result_df <- mi_result_df %>%
+  mutate( outcome = "antidepressant_use",
+          year = 2006 )
+mi_result_df
+
+prev_2006_by_sex <- cal_prev_imp(
+  variables_list = list(
+    list(
+      variable = "used_N06A",
+      condition = "Yes",
+      name = "antidepressant_use"
+      )
+    ),
+  design = design_imp_med_2006,
+  year = 2006,
+  group_var = "sexual_identity_baseline + sex",
+  subgroup = TRUE
+  )
+ 
+identical(
+  mi_result_df,
+  prev_2006_by_sex
+  ) # TRUE
+```
+
+###### 4.6.1.3. Year- and sex-specific imputation
+```{r}
+pooled_sample_cs_final %>%
+  filter( sample_year %in% 2006:2021 ) %>%
+  group_by( sample_year, sex ) %>%
+  summarise(
+    across(
+      c(
+        sexual_identity_baseline,
+        used_N06A,
+        used_N05B,
+        depression,
+        anxiety,
+        stress_related,
+        age,
+        country_of_birth,
+        survey_year
+      ),
+      ~ round( mean( is.na( .x ) ) * 100, 1 ),
+      .names = "{.col}_pmiss"
+      ),
+    .groups = "drop"
+    ) %>% 
+  print( n = Inf )
+
+
+mice_med_list <- list()
+
+for ( yr in 2006:2021 ) {
+  
+  imp_list <- list()
+  
+  for ( sx in c( "Female", "Male" ) ) {
+    
+    imp_data <- pooled_sample_cs_final %>%
+      filter( sample_year == yr, sex == sx ) %>%
+      droplevels()
+    
+    imp_list[[ sx ]] <- mice(
+      imp_data,
+      m = 50,
+      maxit = 10,
+      predictorMatrix = pred,
+      visitSequence = vis,
+      seed = 1234,
+      printFlag = FALSE
+      )
+    }
+  
+  mice_med_list[[ as.character( yr ) ]] <- rbind(
+    imp_list[[ "Female" ]],
+    imp_list[[ "Male" ]]
+    )
+}
+
+mice_med_list[[16]]$method
+identical( mice_med_list[[16]]$predictorMatrix, pred ) # TRUE
+identical( mice_med_list[[16]]$visitSequence, vis ) # TRUE
+plot( mice_med_list[[16]] )
+
+# saveRDS(
+#   mice_med_list,
+#   file = "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/mice_med_list.rds"
+#   )
+
+# mice_med_list <- readRDS( 
+# "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/mice_med_list.rds" 
+# )
+```
+
+##### 4.6.2. Diagnosis
+###### 4.6.2.1. Model initialization
+```{r}
+# sample year 2003
+missing_pattern( pooled_sample_cs_final %>% 
+                   filter( sample_year == 2003, sex == "Female" ) %>%
+                   select( -c( used_N05B, used_N06A ) )
+                 )
+
+imp_ini_pre <- mice(
+  pooled_sample_cs_final %>% 
+    filter( sample_year == 2003, sex == "Female" ) %>%
+    select( -c( used_N05B, used_N06A ) ),
+  maxit = 0,
+  printFlag = FALSE )
+
+imp_ini_pre$loggedEvents
+imp_ini_pre$nmis
+imp_ini_pre$method
+
+pred_pre <- imp_ini_pre$predictorMatrix
+pred_pre[ , c( "lopnr" ) ] <- 0
+pred_pre
+
+vis_pre <- imp_ini_pre$vis
+vis_pre <- imp_ini_pre$vis[ c( 1:5, 7, 6, 8:10 ) ]
+vis_pre
+
+# sample year 2005
+missing_pattern( pooled_sample_cs_final %>% 
+                   filter( sample_year == 2005, sex == "Female" )
+                 )
+
+imp_ini_post <- mice(
+  pooled_sample_cs_final %>% 
+    filter( sample_year == 2005, sex == "Female" ),
+  maxit = 0,
+  printFlag = FALSE )
+
+imp_ini_post$loggedEvents
+imp_ini_post$nmis
+imp_ini_post$method
+
+pred_post <- imp_ini_post$predictorMatrix
+pred_post[ , c( "lopnr" ) ] <- 0
+pred_post
+
+vis_post <- imp_ini_post$vis
+vis_post <- imp_ini_post$vis[ c( 1:5, 7, 6, 8:12 ) ]
+vis_post
+```
+
+###### 4.6.2.2. Imputation example
+```{r}
+# sample year 2003
+# among females
+imp_diag_2003_female <- mice( 
+  pooled_sample_cs_final %>% 
+    filter( sample_year == 2003, sex == "Female" ) %>%
+    select( -c( used_N05B, used_N06A ) ),
+  m = 50,
+  maxit = 10,
+  predictorMatrix = pred_pre,
+  visitSequence = vis_pre,
+  seed = 1234,
+  printFlag = FALSE
+  )
+
+plot( imp_diag_2003_female )
+
+# among males
+imp_diag_2003_male <- mice( 
+  pooled_sample_cs_final %>% 
+    filter( sample_year == 2003, sex == "Male" ) %>%
+    select( -c( used_N05B, used_N06A ) ),
+  m = 50,
+  maxit = 10,
+  predictorMatrix = pred_pre,
+  visitSequence = vis_pre,
+  seed = 1234,
+  printFlag = FALSE
+  )
+
+plot( imp_diag_2003_male )
+
+# merge imputed data
+imp_diag_2003_all <- rbind( imp_diag_2003_female, imp_diag_2003_male )
+imp_diag_2003_all$method
+imp_diag_2003_all$predictorMatrix
+imp_diag_2003_all$visitSequence
+
+# visualize the distributions of imputed data 
+com <- complete( imp_diag_2003_all, action = "long", include = TRUE )
+
+ggplot( data = com[ !is.na( com$sexual_identity_baseline ), ], # sexual identity  
+       aes( fill = sexual_identity_baseline, x = .imp ) 
+       ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  facet_wrap( ~ sex ) +
+  xlab( "Imputation number" ) + 
+  ylab( "Percentage" ) + 
+  scale_fill_discrete( name = "Sexual Identity" ) + 
+  theme( legend.justification = "bottom" )
+
+ggplot( data = com[ !is.na( com$anxiety ), ], # anxiety  
+       aes( fill = anxiety, x = .imp ) 
+       ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  facet_wrap( ~ sex ) +
+  xlab( "Imputation number" ) + 
+  ylab( "Percentage" ) + 
+  scale_fill_discrete( name = "Anxiety Disorders" ) + 
+  theme( legend.justification = "bottom" )
+
+# pooled analysis
+implist_diag_2003 <- complete( imp_diag_2003_all, action = "all", include = FALSE )
+design_imp_diag_2003 <- svydesign( ids = ~ 1, data = imputationList( implist_diag_2003 ) ) # survey design
+
+mi_result <- MIcombine(
+  with( design_imp_diag_2003,
+        svyby(
+          formula = ~ I( anxiety == "Yes" ), # anxiety
+          by = ~ sexual_identity_baseline + sex,
+          FUN = svyciprop,
+          method = "beta"
+        )
+      )
+    )
+
+mi_result_summary <- summary( mi_result )
+mi_result_summary
+mi_result_df <- rownames_to_column( mi_result_summary[ , c( "results", "(lower", "upper)" ) ], var = "subgroup" )
+mi_result_df
+mi_result_df <- mi_result_df %>%
+  tidyr::separate(
+    subgroup,
+    into = c( "sexual_identity", "sex" ),
+    sep = "\\.",
+    remove = TRUE )
+
+colnames( mi_result_df )[ -c( 1, 2 ) ] <- c( "point_estimate", "lower_ci", "upper_ci" )
+mi_result_df <- mi_result_df %>%
+  mutate( outcome = "anxiety",
+          year = 2003 )
+mi_result_df
+
+prev_2003_by_sex <- cal_prev_imp(
+  variables_list = list(
+    list(
+      variable = "anxiety",
+      condition = "Yes",
+      name = "anxiety"
+      )
+    ),
+  design = design_imp_diag_2003,
+  year = 2003,
+  group_var = "sexual_identity_baseline + sex",
+  subgroup = TRUE
+  )
+ 
+identical(
+  mi_result_df,
+  prev_2003_by_sex
+  ) # TRUE
+```
+
+###### 4.6.2.3. Year- and sex-specific imputation
+```{r}
+pooled_sample_cs_final %>%
+  filter( sample_year %in% 2003:2019 ) %>%
+  group_by( sample_year, sex ) %>%
+  summarise(
+    across(
+      c(
+        sexual_identity_baseline,
+        used_N06A,
+        used_N05B,
+        depression,
+        anxiety,
+        stress_related,
+        age,
+        country_of_birth,
+        survey_year
+      ),
+      ~ round( mean( is.na( .x ) ) * 100, 1 ),
+      .names = "{.col}_pmiss"
+      ),
+    .groups = "drop"
+    ) %>% 
+  View()
+
+
+mice_diag_list <- list()
+
+# sample years 2003 and 2004
+for ( yr in 2003:2004 ) {
+  
+  imp_list <- list()
+  
+  for ( sx in c( "Female", "Male" ) ) {
+    
+    imp_data <- pooled_sample_cs_final %>%
+      filter( sample_year == yr, sex == sx ) %>%
+      select( -c( used_N05B, used_N06A ) ) %>%
+      droplevels()
+    
+    imp_list[[ sx ]] <- mice(
+      imp_data,
+      m = 50,
+      maxit = 10,
+      predictorMatrix = pred_pre,
+      visitSequence = vis_pre,
+      seed = 1234,
+      printFlag = FALSE
+    )
+  }
+  
+  mice_diag_list[[ as.character( yr ) ]] <- rbind(
+    imp_list[[ "Female" ]],
+    imp_list[[ "Male" ]]
+  )
+}
+
+# sample years 2005-2019
+for ( yr in 2005:2019 ) {
+  
+  imp_list <- list()
+  
+  for ( sx in c( "Female", "Male" ) ) {
+    
+    imp_data <- pooled_sample_cs_final %>%
+      filter( sample_year == yr, sex == sx ) %>%
+      droplevels()
+    
+    imp_list[[ sx ]] <- mice(
+      imp_data,
+      m = 50,
+      maxit = 10,
+      predictorMatrix = pred_post,
+      visitSequence = vis_post,
+      seed = 1234,
+      printFlag = FALSE
+    )
+  }
+  
+  mice_diag_list[[ as.character( yr ) ]] <- rbind(
+    imp_list[[ "Female" ]],
+    imp_list[[ "Male" ]]
+  )
+}
+
+mice_diag_list[[ 1 ]]$method
+identical( mice_diag_list[[ 1 ]]$predictorMatrix, pred_pre ) # TRUE
+identical( mice_diag_list[[ 1 ]]$visitSequence, vis_pre ) # TRUE
+plot( mice_diag_list[[ 1 ]] )
+complete( mice_diag_list[[ "2003" ]], 0 ) %>% count( sex )
+complete( mice_diag_list[[ "2003" ]], 1 ) %>% count( sex )
+
+mice_diag_list[[ 3 ]]$method
+identical( mice_diag_list[[ 3 ]]$predictorMatrix, pred_post ) # TRUE
+identical( mice_diag_list[[ 3 ]]$visitSequence, vis_post ) # TRUE
+plot( mice_diag_list[[ 3 ]] )
+complete( mice_diag_list[[ "2005" ]], 0 ) %>% count( sex )
+complete( mice_diag_list[[ "2005" ]], 1 ) %>% count( sex )
+
+# saveRDS(
+#   mice_diag_list,
+#   file = "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/mice_diag_list.rds"
+#   )
+
+# mice_diag_list <- readRDS( 
+# "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/mice_diag_list.rds" 
+# )
 ```
 
 ### 5. Year-Specific Cohort Analyses
