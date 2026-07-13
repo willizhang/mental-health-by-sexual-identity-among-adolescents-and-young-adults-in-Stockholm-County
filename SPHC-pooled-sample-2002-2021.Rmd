@@ -3333,8 +3333,285 @@ prev_imp_by_sex <- bind_rows(
   )
 prev_imp_by_sex %>% count( year, outcome )
 
-writexl::write_xlsx( overall_prev_imp, "results_output/results_cc/prevalence_poo_cs_imp.xlsx" )
-writexl::write_xlsx( prev_imp_by_sex, "results_output/results_cc/prevalence_poo_cs_by_sex_imp.xlsx" )
+writexl::write_xlsx( overall_prev_imp, "results_output/results_mi/prevalence_poo_cs_imp.xlsx" )
+writexl::write_xlsx( prev_imp_by_sex, "results_output/results_mi/prevalence_poo_cs_by_sex_imp.xlsx" )
+```
+
+##### 4.6.4. Prevalence ratio
+```{r}
+# diagnosis outcomes
+outcome_list_1 <- list(
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ) )
+
+pr_diag_model_list <- list()
+
+for ( yr in 2003:2019 ) {
+  
+  implist_diag_year <- complete(
+    mice_diag_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_diag_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_diag_year )
+    )
+  
+  for ( var in outcome_list_1 ) {
+    
+    # crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline"
+        )
+      )
+    
+    pr_diag_model_list[[ paste0(
+      var$name, "_", yr, "_crude"
+      ) ]] <- fit_pr_imp(
+      formula = fml_crude,
+      design = design_imp_diag_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "crude"
+    )
+    
+    # adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline + age + sex + country_of_birth"
+      )
+    )
+    
+    pr_diag_model_list[[ paste0(
+      var$name, "_", yr, "_adjusted"
+    ) ]] <- fit_pr_imp(
+      formula = fml_adjusted,
+      design = design_imp_diag_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+  }
+}
+
+pr_diag_imp <- bind_rows(
+  lapply( pr_diag_model_list, extract_pr_imp )
+  )
+
+# medication
+outcome_list_2 <- list(
+  list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
+
+pr_med_model_list <- list()
+
+for ( yr in 2006:2021 ) {
+  
+  implist_med_year <- complete(
+    mice_med_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_med_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_med_year )
+    )
+  
+  for ( var in outcome_list_2 ) {
+    
+    # crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline"
+        )
+      )
+    
+    pr_med_model_list[[ paste0(
+      var$name, "_", yr, "_crude"
+      ) ]] <- fit_pr_imp(
+      formula = fml_crude,
+      design = design_imp_med_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "crude"
+    )
+    
+    # adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline + age + sex + country_of_birth"
+      )
+    )
+    
+    pr_med_model_list[[ paste0(
+      var$name, "_", yr, "_adjusted"
+    ) ]] <- fit_pr_imp(
+      formula = fml_adjusted,
+      design = design_imp_med_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+  }
+}
+
+pr_med_imp <- bind_rows(
+  lapply( pr_med_model_list, extract_pr_imp )
+  )
+
+pr_all_imp <- bind_rows( pr_med_imp, pr_diag_imp )
+writexl::write_xlsx( pr_all_imp, "results_output/results_mi/pr_poo_cs_imp.xlsx" )
+```
+
+##### 4.6.5. Prevalence difference
+```{r}
+# diagnosis outcomes
+outcome_list_1 <- list(
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ) )
+
+pd_diag_model_list <- list()
+
+for ( yr in 2003:2019 ) {
+  
+  implist_diag_year <- complete(
+    mice_diag_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_diag_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_diag_year )
+    )
+  
+  for ( var in outcome_list_1 ) {
+    
+    # crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline"
+        )
+      )
+    
+    pd_diag_model_list[[ paste0(
+      var$name, "_", yr, "_crude"
+      ) ]] <- fit_pd_imp(
+      formula = fml_crude,
+      design = design_imp_diag_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "crude"
+    )
+    
+    # adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline + age + sex + country_of_birth"
+      )
+    )
+    
+    pd_diag_model_list[[ paste0(
+      var$name, "_", yr, "_adjusted"
+    ) ]] <- fit_pd_imp(
+      formula = fml_adjusted,
+      design = design_imp_diag_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+  }
+}
+
+pd_diag_imp <- bind_rows(
+  lapply( pd_diag_model_list, extract_pd_imp )
+  )
+
+# medication
+outcome_list_2 <- list(
+  list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
+
+pd_med_model_list <- list()
+
+for ( yr in 2006:2021 ) {
+  
+  implist_med_year <- complete(
+    mice_med_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_med_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_med_year )
+    )
+  
+  for ( var in outcome_list_2 ) {
+    
+    # crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline"
+        )
+      )
+    
+    pd_med_model_list[[ paste0(
+      var$name, "_", yr, "_crude"
+      ) ]] <- fit_pd_imp(
+      formula = fml_crude,
+      design = design_imp_med_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "crude"
+    )
+    
+    # adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_baseline + age + sex + country_of_birth"
+      )
+    )
+    
+    pd_med_model_list[[ paste0(
+      var$name, "_", yr, "_adjusted"
+    ) ]] <- fit_pd_imp(
+      formula = fml_adjusted,
+      design = design_imp_med_year,
+      year = yr,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+  }
+}
+
+pd_med_imp <- bind_rows(
+  lapply( pd_med_model_list, extract_pd_imp )
+  )
+
+pd_all_imp <- bind_rows( pd_med_imp, pd_diag_imp ) %>%
+  mutate(
+    across(
+      c( point_estimate, lower_ci, upper_ci ),
+      ~ .x * 100
+      )
+    )
+
+writexl::write_xlsx( pd_all_imp, "results_output/results_mi/pd_poo_cs_imp.xlsx" )
 ```
 
 ### 5. Year-Specific Cohort Analyses

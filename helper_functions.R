@@ -425,3 +425,167 @@ extract_pd_by_sex_cc <- function( model_list, exposure_var ) {
   
   bind_rows( results )
 }
+
+
+##### Function to Calculate Outcome Prevalence by Sexual Identity after Imputation #####
+
+cal_prev_imp <- function( variables_list, design, year, group_var, subgroup = FALSE ) {
+  
+  results <- list()
+  
+  for ( var in variables_list ) {
+    
+    mi_result <- MIcombine(
+      with(
+        design,
+        svyby(
+          formula = as.formula( paste0( "~ I(", var$variable, " == '", var$condition, "')" ) ),
+          by = as.formula( paste0( "~", group_var ) ),
+          FUN = svyciprop,
+          method = "beta"
+        )
+      )
+    )
+    
+    mi_result_summary <- summary( mi_result )
+    
+    svyby_result <- rownames_to_column( mi_result_summary[ , c( "results", "(lower", "upper)" ) ], var = "subgroup" )
+    
+    if ( subgroup ) {
+      svyby_result <- svyby_result %>%
+        tidyr::separate(
+          subgroup,
+          into = c( "sexual_identity", "sex" ),
+          sep = "\\.",
+          remove = TRUE
+        )
+      
+      colnames( svyby_result )[ -c( 1, 2 ) ] <- c( "point_estimate", "lower_ci", "upper_ci" )
+      
+    } else {
+      colnames( svyby_result ) <- c( "sexual_identity", "point_estimate", "lower_ci", "upper_ci" )
+    }
+    
+    svyby_result <- svyby_result %>%
+      mutate( outcome = var$name,
+              year = year )
+    
+    results[[ var$name ]] <- svyby_result
+  }
+  
+  bind_rows( results )
+}
+
+
+##### Function for Regression Model after Imputation #####
+
+# Poisson regression
+fit_pr_imp <- function( formula, design, year, outcome, model_type ) {
+  
+  model_result <- MIcombine(
+    with(
+      design,
+      svyglm(
+        formula,
+        family = quasipoisson( link = "log" )
+        )
+      )
+    )
+  
+  model_summary <- summary( model_result )
+  
+  model_df <- rownames_to_column(
+    model_summary[, c( "results", "(lower", "upper)" ) ],
+    var = "subgroup"
+    )
+  
+  model_df[ , c( "results", "(lower", "upper)" ) ] <-
+    exp( model_df[, c( "results", "(lower", "upper)" ) ] )
+  
+  model_df <- model_df %>%
+    rename(
+      point_estimate = results,
+      lower_ci = `(lower`,
+      upper_ci = `upper)`
+      ) %>%
+    mutate(
+      outcome = outcome,
+      model_type = model_type,
+      year = year
+      )
+  
+  model_df
+  }
+
+# extract PR
+extract_pr_imp <- function( model_df, exposure = "sexual_identity_baseline" ) {
+  
+  model_df %>%
+    filter( grepl( paste0( "^", exposure ), subgroup ) ) %>%
+    mutate(
+      sexual_identity = gsub( paste0( "^", exposure ), "", subgroup )
+      ) %>%
+    select(
+      year,
+      outcome,
+      model_type,
+      sexual_identity,
+      point_estimate,
+      lower_ci,
+      upper_ci
+    )
+}
+
+# linear probability model
+fit_pd_imp <- function( formula, design, year, outcome, model_type ) {
+  
+  model_result <- MIcombine(
+    with(
+      design,
+      svyglm(
+        formula,
+        family = gaussian( link = "identity" )
+      )
+    )
+  )
+  
+  model_summary <- summary( model_result )
+  
+  model_df <- rownames_to_column(
+    model_summary[, c( "results", "(lower", "upper)" ) ],
+    var = "subgroup"
+  )
+  
+  model_df <- model_df %>%
+    rename(
+      point_estimate = results,
+      lower_ci = `(lower`,
+      upper_ci = `upper)`
+    ) %>%
+    mutate(
+      outcome = outcome,
+      model_type = model_type,
+      year = year
+    )
+  
+  model_df
+}
+
+# extract PD
+extract_pd_imp <- function( model_df, exposure = "sexual_identity_baseline" ) {
+  
+  model_df %>%
+    filter( grepl( paste0( "^", exposure ), subgroup ) ) %>%
+    mutate(
+      sexual_identity = gsub( paste0( "^", exposure ), "", subgroup )
+    ) %>%
+    select(
+      year,
+      outcome,
+      model_type,
+      sexual_identity,
+      point_estimate,
+      lower_ci,
+      upper_ci
+    )
+}
