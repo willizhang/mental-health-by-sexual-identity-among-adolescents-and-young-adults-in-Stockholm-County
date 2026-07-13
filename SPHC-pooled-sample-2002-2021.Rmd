@@ -3242,6 +3242,101 @@ complete( mice_diag_list[[ "2005" ]], 1 ) %>% count( sex )
 # )
 ```
 
+##### 4.6.3. Prevalence
+```{r}
+# diagnosis outcomes
+outcome_list_1 <- list(
+  list( variable = "depression", condition = "Yes", name = "depression" ),
+  list( variable = "anxiety", condition = "Yes", name = "anxiety" ),
+  list( variable = "stress_related", condition = "Yes", name = "stress_related" ) )
+
+overall_prev_diag_list <- list()
+prev_diag_by_sex_list <- list()
+
+for ( yr in 2003:2019 ) {
+  
+  implist_diag_year <- complete(
+    mice_diag_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_diag_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_diag_year )
+    )
+  
+  overall_prev_diag_list[[ as.character( yr ) ]] <- cal_prev_imp(
+    variables_list = outcome_list_1,
+    design = design_imp_diag_year,
+    year = yr,
+    group_var = "sexual_identity_baseline",
+    subgroup = FALSE
+    )
+  
+  prev_diag_by_sex_list[[ as.character( yr ) ]] <- cal_prev_imp(
+    variables_list = outcome_list_1,
+    design = design_imp_diag_year,
+    year = yr,
+    group_var = "sexual_identity_baseline + sex",
+    subgroup = TRUE
+    )
+  }
+
+# medication
+outcome_list_2 <- list(
+  list( variable = "used_N06A", condition = "Yes", name = "antidepressant_use" ),
+  list( variable = "used_N05B", condition = "Yes", name = "anxiolytic_use" ) )
+
+overall_prev_med_list <- list()
+prev_med_by_sex_list <- list()
+
+for ( yr in 2006:2021 ) {
+  
+  implist_med_year <- complete(
+    mice_med_list[[ as.character( yr ) ]],
+    action = "all",
+    include = FALSE
+    )
+  
+  design_imp_med_year <- svydesign(
+    ids = ~ 1,
+    data = imputationList( implist_med_year )
+    )
+  
+  overall_prev_med_list[[ as.character( yr ) ]] <- cal_prev_imp(
+    variables_list = outcome_list_2,
+    design = design_imp_med_year,
+    year = yr,
+    group_var = "sexual_identity_baseline",
+    subgroup = FALSE
+    )
+  
+  prev_med_by_sex_list[[ as.character( yr ) ]] <- cal_prev_imp(
+    variables_list = outcome_list_2,
+    design = design_imp_med_year,
+    year = yr,
+    group_var = "sexual_identity_baseline + sex",
+    subgroup = TRUE
+    )
+  }
+
+overall_prev_imp <- bind_rows(
+  bind_rows( overall_prev_med_list ),
+  bind_rows( overall_prev_diag_list )
+  )
+overall_prev_imp %>% count( year, outcome )
+
+prev_imp_by_sex <- bind_rows(
+  bind_rows( prev_med_by_sex_list ),
+  bind_rows( prev_diag_by_sex_list )
+  )
+prev_imp_by_sex %>% count( year, outcome )
+
+writexl::write_xlsx( overall_prev_imp, "results_output/results_cc/prevalence_poo_cs_imp.xlsx" )
+writexl::write_xlsx( prev_imp_by_sex, "results_output/results_cc/prevalence_poo_cs_by_sex_imp.xlsx" )
+```
+
 ### 5. Year-Specific Cohort Analyses
 #### 5.1. Construct study samples
 ```{r}
