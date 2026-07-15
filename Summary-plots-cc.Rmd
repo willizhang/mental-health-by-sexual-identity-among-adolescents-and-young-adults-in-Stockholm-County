@@ -3910,7 +3910,8 @@ p_cum_diag_by_sex <- ggplot(
   facet_grid(
     outcome ~ sex,
     scales = "free_y",
-    switch = "y"
+    switch = "y",
+    axes = "all_x"
     ) +
   
   ggh4x::facetted_pos_scales( y = list(
@@ -4005,7 +4006,8 @@ p_cum_med_by_sex <- ggplot(
   facet_grid(
     outcome ~ sex,
     scales = "free_y",
-    switch = "y"
+    switch = "y",
+    axes = "all_x"
   ) +
   
   ggh4x::facetted_pos_scales( y = list(
@@ -4740,7 +4742,8 @@ p_diag <- ggplot(
   
   facet_wrap( ~ outcome, 
               ncol = 1,
-              scales = "free_y" ) +
+              scales = "free_y",
+              axes = "all_x" ) +
   
   ggh4x::facetted_pos_scales( y = list(
     outcome == "Depression" ~ scale_y_continuous( 
