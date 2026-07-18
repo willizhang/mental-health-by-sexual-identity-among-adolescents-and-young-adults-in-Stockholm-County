@@ -3401,7 +3401,9 @@ for ( yr in 2003:2019 ) {
 }
 
 pr_diag_imp <- bind_rows(
-  lapply( pr_diag_model_list, extract_pr_imp )
+  lapply( pr_diag_model_list, 
+          extract_asso_imp,
+          exposure = "sexual_identity_baseline" )
   )
 
 # medication
@@ -3465,7 +3467,9 @@ for ( yr in 2006:2021 ) {
 }
 
 pr_med_imp <- bind_rows(
-  lapply( pr_med_model_list, extract_pr_imp )
+  lapply( pr_med_model_list, 
+          extract_asso_imp,
+          exposure = "sexual_identity_baseline" )
   )
 
 pr_all_imp <- bind_rows( pr_med_imp, pr_diag_imp )
@@ -3536,7 +3540,9 @@ for ( yr in 2003:2019 ) {
 }
 
 pd_diag_imp <- bind_rows(
-  lapply( pd_diag_model_list, extract_pd_imp )
+  lapply( pd_diag_model_list, 
+          extract_asso_imp,
+          exposure = "sexual_identity_baseline" )
   )
 
 # medication
@@ -3600,7 +3606,9 @@ for ( yr in 2006:2021 ) {
 }
 
 pd_med_imp <- bind_rows(
-  lapply( pd_med_model_list, extract_pd_imp )
+  lapply( pd_med_model_list, 
+          extract_asso_imp,
+          exposure = "sexual_identity_baseline" )
   )
 
 pd_all_imp <- bind_rows( pd_med_imp, pd_diag_imp ) %>%

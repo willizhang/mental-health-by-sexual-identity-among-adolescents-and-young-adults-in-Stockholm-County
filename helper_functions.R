@@ -517,25 +517,6 @@ fit_pr_imp <- function( formula, design, year, outcome, model_type ) {
   model_df
   }
 
-# extract PR
-extract_pr_imp <- function( model_df, exposure = "sexual_identity_baseline" ) {
-  
-  model_df %>%
-    filter( grepl( paste0( "^", exposure ), subgroup ) ) %>%
-    mutate(
-      sexual_identity = gsub( paste0( "^", exposure ), "", subgroup )
-      ) %>%
-    select(
-      year,
-      outcome,
-      model_type,
-      sexual_identity,
-      point_estimate,
-      lower_ci,
-      upper_ci
-    )
-}
-
 # linear probability model
 fit_pd_imp <- function( formula, design, year, outcome, model_type ) {
   
@@ -571,8 +552,8 @@ fit_pd_imp <- function( formula, design, year, outcome, model_type ) {
   model_df
 }
 
-# extract PD
-extract_pd_imp <- function( model_df, exposure = "sexual_identity_baseline" ) {
+# extract association
+extract_asso_imp <- function( model_df, exposure ) {
   
   model_df %>%
     filter( grepl( paste0( "^", exposure ), subgroup ) ) %>%
