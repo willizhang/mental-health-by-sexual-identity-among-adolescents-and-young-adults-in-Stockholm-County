@@ -1066,6 +1066,7 @@ design_imp_2010 <- svydesign( ids = ~ 1,
                               data = imputationList( implist_2010_all )
                               ) # without pre-calibration
 
+design_imp_2010 <- subset( design_imp_2010, age <= 29 )
 class( design_imp_2010 )
 
 outcome_list <- list(
@@ -1263,7 +1264,13 @@ pd_2010 <- bind_rows(
     extract_asso_imp,
     exposure = "sexual_identity_2010"
   )
-)
+) %>%
+  mutate(
+    across(
+      c( point_estimate, lower_ci, upper_ci ),
+      ~ .x * 100
+    )
+  )
 
 writexl::write_xlsx( pd_2010, "results_output/results_mi/pd_2010_imp.xlsx" )
 
