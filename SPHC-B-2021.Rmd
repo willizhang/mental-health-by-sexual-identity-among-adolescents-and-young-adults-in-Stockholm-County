@@ -14,6 +14,7 @@ library(tidyverse)
 library(finalfit)
 library(lubridate)
 library(naniar)
+library(lemon)
 library(jomo)
 library(mitml)
 library(mitools)
@@ -855,4 +856,458 @@ pd_female_adjusted_cc <- extract_pd_by_sex_cc(
 
 pd_female_2021_cc <- bind_rows( pd_female_crude_cc, pd_female_adjusted_cc )
 writexl::write_xlsx( pd_female_2021_cc, "results_output/results_cc/pd_female_2021_cc.xlsx" )
+```
+
+### 5. Multiple Imputation
+#### 5.1. Obtain incomplete dataset
+```{r}
+summary( d_2021_complete_final %>%
+           filter( !is.na( lopnr ) ) )
+
+selected_variables <- c( "sampling_strata_region", "calibrated_weight", "no.of.population", 
+                         "sexual_identity_2021", "age", "sex", "country_of_birth", "education", 
+                         "income", "psychological_distress", "suicidal_thoughts", "suicide_attempts", 
+                         "used_N06A", "used_N05B", "depression", "anxiety", "stress_related" )
+
+d_2021_incomplete <- d_2021_complete_final %>%
+  filter( !is.na( lopnr ) ) %>%
+  select( all_of( selected_variables ) )
+
+# create weight strata (n = 25) for two-level multivariate normal imputation
+d_2021_incomplete$weight_strata <- as.factor( cut( d_2021_incomplete$calibrated_weight,
+                                                   breaks = quantile( d_2021_incomplete$calibrated_weight, 
+                                                                      probs = seq( 0, 1, length.out = 26 ) ),
+                                                   labels = 1:25,
+                                                   include.lowest = TRUE,
+                                                   right = TRUE ) )
+
+ggplot( d_2021_incomplete %>% 
+          group_by( weight_strata ) %>% 
+          summarise( mean_weight = mean( calibrated_weight ), sd_weight = sd( calibrated_weight ) ),
+        aes( y = reorder( weight_strata, -mean_weight ), x = mean_weight ) ) +
+  geom_line( aes( group = 1 ) ) +
+  geom_point() +
+  geom_errorbarh( aes( xmin = mean_weight - sd_weight, xmax = mean_weight + sd_weight ), height = 0.4, alpha = 0.5 ) +
+  scale_x_continuous( limits = c( 0, 260 ), 
+                      breaks = c( 0, 50, 100, 150, 200, 250 ), 
+                      expand = c( 0.02, 0 ) ) +
+  labs( y = "Calibrated Weight Strata", x = "Mean and Standard Deviation of Calibrated Weights" ) +
+  theme_classic() +
+  theme( axis.text.y = element_text( family = "Arial", size = 11 ),
+         axis.title.y = element_text( family = "Arial", size = 11 ),
+         axis.text.x = element_text( family = "Arial", size = 11 ),
+         axis.title.x = element_text( family = "Arial", size = 11 )
+         ) +
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+summary( d_2021_incomplete )
+sapply( d_2021_incomplete, class ) # all continuous variables are numeric, and all categorical variables are factor
+
+# identify missing variables
+vis_miss( d_2021_incomplete )
+n_miss( d_2021_incomplete )
+miss_var_summary( d_2021_incomplete ) # 3.5% in psychological_distress and 2.2% in sexual_identity_2021
+```
+
+#### 5.2. Two-level multivariate normal imputation
+```{r}
+# use multiple imputation to account for item non-response
+# assume Missing At Random (MAR)
+
+# specify imputation model
+fml_imp_2021 <- 
+  psychological_distress + sexual_identity_2021 + education + suicidal_thoughts + suicide_attempts + 
+  income + used_N05B + depression + anxiety + used_N06A + stress_related ~ 1 + 
+  age + country_of_birth + ( 1 | weight_strata )
+
+# perform a "dry run"
+imp_ini_2021_by_sex <- list()
+
+for ( sx in c( "Female", "Male" ) ) {
+  
+  imp_ini_2021_by_sex[[ sx ]] <- jomoImpute(
+    data = d_2021_incomplete %>%
+      filter( sex == sx ),
+    formula = fml_imp_2021,
+    random.L1 = "full", # random covariance matrix of residuals
+    n.burn = 2, # number of burn-in iterations
+    n.iter = 10, # number of between-imputation iterations
+    m = 2, # number of imputation
+    seed = 12345
+  )
+}
+
+summary( imp_ini_2021_by_sex[[ "Female" ]] )
+summary( imp_ini_2021_by_sex[[ "Male" ]] )
+
+
+# sex-specific imputation
+imp_2021_by_sex <- list()
+
+for ( sx in c( "Female", "Male" ) ) {
+  
+  imp_data <- d_2021_incomplete %>%
+    filter( sex == sx )
+  
+  imp_2021_by_sex[[ sx ]] <- jomoImpute(
+    data = imp_data,
+    formula = fml_imp_2021,
+    random.L1 = "full",
+    n.burn = 2000,
+    n.iter = 1000,
+    m = 20,
+    seed = 12345
+  )
+}
+
+saveRDS(
+  imp_2021_by_sex,
+  file = "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/imp_2021_by_sex.rds"
+)
+
+# imp_2021_by_sex <- readRDS( "/Volumes/projects/LGBT Project data/Multiple Imputation/mental_health_project/imp_2021_by_sex.rds" )
+
+summary( imp_2021_by_sex [[ "Female" ]] )
+summary( imp_2021_by_sex [[ "Male" ]] )
+plot( imp_2021_by_sex [[ "Female" ]], trace = "all", print = "beta" )
+plot( imp_2021_by_sex [[ "Male" ]], trace = "all", print = "beta" )
+
+implist_2021_female <- mitmlComplete(
+  imp_2021_by_sex[[ "Female" ]],
+  print = "all"
+)
+
+implist_2021_male <- mitmlComplete(
+  imp_2021_by_sex[[ "Male" ]],
+  print = "all"
+)
+
+implist_2021_all <- Map(
+  rbind,
+  implist_2021_female,
+  implist_2021_male
+)
+
+class( implist_2021_all )
+length( implist_2021_all )
+
+implist_2021_all[[ 1 ]] %>%
+  count( sex )
+summary( implist_2021_all[[ 1 ]] )
+```
+
+#### 5.3. Validate imputed data
+```{r}
+# plot imputed variables
+d_2021_incomplete$imputation <- "0"
+all_data_2021 <- bind_rows( d_2021_incomplete,
+                            bind_rows( implist_2021_all, .id = "imputation" ) ) # merge datasets
+all_data_2021$imputation <- as.numeric( all_data_2021$imputation )
+summary( all_data_2021 )
+
+# sexual identity in 2021
+ggplot( all_data_2021[ !is.na( all_data_2021$sexual_identity_2021 ), ],
+        aes( fill = sexual_identity_2021, x = imputation ) ) + 
+  geom_bar( position = "fill" ) + 
+  scale_y_continuous( labels = scales::percent ) + 
+  scale_fill_discrete( name = "Sexual identity in 2021" ) +
+  labs(
+    x = "Imputation number",
+    y = "Proportion",
+    caption = "Notes: Imputation number 0 represents the original incomplete dataset." ) +
+  theme_classic() +
+  theme( axis.title.x = element_text( family = "Arial", size = 11 ),
+         axis.text.x = element_text( family = "Arial", size = 11 ),
+         axis.text.y = element_text( family = "Arial", size = 11 ),
+         axis.title.y = element_text( family = "Arial", size = 11 ),
+         legend.text = element_text( family = "Arial", size = 10 ),
+         legend.title = element_text( family = "Arial", size = 10 ),
+         legend.position = "bottom",
+         plot.caption = element_text( family = "Arial", size = 10, hjust = 0 ) 
+  )
+```
+
+#### 5.4. Survey analyses
+##### 5.4.1 Prepare for analyses
+```{r}
+# use calibrated weights to account for unit non-response
+# create survey design
+design_imp_2021 <- svydesign( ids = ~ 1,
+                              strata = ~ sampling_strata_region,
+                              weights = ~ calibrated_weight,
+                              fpc = ~ no.of.population,
+                              data = imputationList( implist_2021_all )
+) # without pre-calibration
+
+design_imp_2021 <- subset( design_imp_2021, age <= 29 )
+class( design_imp_2021 )
+
+outcome_list <- list(
+  list( variable = "used_N06A", condition = "Yes", name = "antidepressant" ),
+  list( variable = "used_N05B", condition = "Yes", name = "anxiolytic" ),
+  list( variable = "psychological_distress", condition = "Yes", name = "psychological_distress" ),
+  list( variable = "suicidal_thoughts", condition = "Yes", name = "suicidal_thoughts" ),
+  list( variable = "suicide_attempts", condition = "Yes", name = "suicide_attempts" )
+)
+```
+
+##### 5.4.2. Prevalence
+```{r}
+overall_prev_2021 <- cal_prev_imp(
+  variables_list = outcome_list,
+  design = design_imp_2021,
+  year = 2021,
+  group_var = "sexual_identity_2021",
+  subgroup = FALSE
+)
+
+prev_2021_by_sex <- cal_prev_imp(
+  variables_list = outcome_list,
+  design = design_imp_2021,
+  year = 2021,
+  group_var = "sexual_identity_2021 + sex",
+  subgroup = TRUE
+)
+
+writexl::write_xlsx( overall_prev_2021, "results_output/results_mi/overall_prevalence_2021_imp.xlsx" )
+writexl::write_xlsx( prev_2021_by_sex, "results_output/results_mi/prevalence_2021_by_sex_imp.xlsx" )
+```
+
+##### 5.4.3. Prevalence ratio
+```{r}
+pr_model_list <- list()
+
+for ( var in outcome_list ) {
+  
+  ## crude model
+  fml_crude <- as.formula(
+    paste0(
+      "I(", var$variable, " == '", var$condition, "') ~ ",
+      "sexual_identity_2021"
+    )
+  )
+  
+  pr_model_list[[ paste0( var$name, "_crude" ) ]] <-
+    fit_pr_imp(
+      formula = fml_crude,
+      design = design_imp_2021,
+      year = 2021,
+      outcome = var$name,
+      model_type = "crude"
+    )
+  
+  ## adjusted model
+  fml_adjusted <- as.formula(
+    paste0(
+      "I(", var$variable, " == '", var$condition, "') ~ ",
+      "sexual_identity_2021 + age + sex + country_of_birth"
+    )
+  )
+  
+  pr_model_list[[ paste0( var$name, "_adjusted" ) ]] <-
+    fit_pr_imp(
+      formula = fml_adjusted,
+      design = design_imp_2021,
+      year = 2021,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+}
+
+pr_2021 <- bind_rows(
+  lapply(
+    pr_model_list,
+    extract_asso_imp,
+    exposure = "sexual_identity_2021"
+  )
+)
+
+writexl::write_xlsx( pr_2021, "results_output/results_mi/pr_2021_imp.xlsx" )
+
+
+# by sex
+pr_model_by_sex_list <- list()
+sex_levels <- c( "Female", "Male" )
+
+for ( sx in sex_levels ) {
+  
+  design_sex <- subset( design_imp_2021, sex == sx )
+  
+  for ( var in outcome_list ) {
+    
+    ## crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_2021"
+      )
+    )
+    
+    pr_model_by_sex_list[[ paste( sx, var$name, "crude", sep = "_" ) ]] <-
+      fit_pr_imp(
+        formula = fml_crude,
+        design = design_sex,
+        year = 2021,
+        outcome = var$name,
+        model_type = "crude"
+      )
+    
+    ## adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_2021 + age + country_of_birth"
+      )
+    )
+    
+    pr_model_by_sex_list[[ paste( sx, var$name, "adjusted", sep = "_" ) ]] <-
+      fit_pr_imp(
+        formula = fml_adjusted,
+        design = design_sex,
+        year = 2021,
+        outcome = var$name,
+        model_type = "adjusted"
+      )
+  }
+}
+
+pr_2021_by_sex <- bind_rows(
+  lapply(
+    pr_model_by_sex_list,
+    extract_asso_imp,
+    exposure = "sexual_identity_2021"
+  ),
+  .id = "model"
+) %>%
+  mutate(
+    sex = sub( "_.*", "", model )
+  ) %>%
+  select( -model )
+
+writexl::write_xlsx( pr_2021_by_sex, "results_output/results_mi/pr_2021_by_sex_imp.xlsx" )
+```
+
+##### 5.4.4. Prevalence difference
+```{r}
+pd_model_list <- list()
+
+for ( var in outcome_list ) {
+  
+  ## crude model
+  fml_crude <- as.formula(
+    paste0(
+      "I(", var$variable, " == '", var$condition, "') ~ ",
+      "sexual_identity_2021"
+    )
+  )
+  
+  pd_model_list[[ paste0( var$name, "_crude" ) ]] <-
+    fit_pd_imp(
+      formula = fml_crude,
+      design = design_imp_2021,
+      year = 2021,
+      outcome = var$name,
+      model_type = "crude"
+    )
+  
+  ## adjusted model
+  fml_adjusted <- as.formula(
+    paste0(
+      "I(", var$variable, " == '", var$condition, "') ~ ",
+      "sexual_identity_2021 + age + sex + country_of_birth"
+    )
+  )
+  
+  pd_model_list[[ paste0( var$name, "_adjusted" ) ]] <-
+    fit_pd_imp(
+      formula = fml_adjusted,
+      design = design_imp_2021,
+      year = 2021,
+      outcome = var$name,
+      model_type = "adjusted"
+    )
+}
+
+pd_2021 <- bind_rows(
+  lapply(
+    pd_model_list,
+    extract_asso_imp,
+    exposure = "sexual_identity_2021"
+  )
+) %>%
+  mutate(
+    across(
+      c( point_estimate, lower_ci, upper_ci ),
+      ~ .x * 100
+    )
+  )
+
+writexl::write_xlsx( pd_2021, "results_output/results_mi/pd_2021_imp.xlsx" )
+
+
+# by sex
+pd_model_by_sex_list <- list()
+sex_levels <- c( "Female", "Male" )
+
+for ( sx in sex_levels ) {
+  
+  design_sex <- subset( design_imp_2021, sex == sx )
+  
+  for ( var in outcome_list ) {
+    
+    ## crude model
+    fml_crude <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_2021"
+      )
+    )
+    
+    pd_model_by_sex_list[[ paste( sx, var$name, "crude", sep = "_" ) ]] <-
+      fit_pd_imp(
+        formula = fml_crude,
+        design = design_sex,
+        year = 2021,
+        outcome = var$name,
+        model_type = "crude"
+      )
+    
+    ## adjusted model
+    fml_adjusted <- as.formula(
+      paste0(
+        "I(", var$variable, " == '", var$condition, "') ~ ",
+        "sexual_identity_2021 + age + country_of_birth"
+      )
+    )
+    
+    pd_model_by_sex_list[[ paste( sx, var$name, "adjusted", sep = "_" ) ]] <-
+      fit_pd_imp(
+        formula = fml_adjusted,
+        design = design_sex,
+        year = 2021,
+        outcome = var$name,
+        model_type = "adjusted"
+      )
+  }
+}
+
+pd_2021_by_sex <- bind_rows(
+  lapply(
+    pd_model_by_sex_list,
+    extract_asso_imp,
+    exposure = "sexual_identity_2021"
+  ),
+  .id = "model"
+) %>%
+  mutate(
+    sex = sub( "_.*", "", model ),
+    
+    across(
+      c( point_estimate, lower_ci, upper_ci ),
+      ~ .x * 100
+    )
+  ) %>%
+  select( -model )
+
+writexl::write_xlsx( pd_2021_by_sex, "results_output/results_mi/pd_2021_by_sex_imp.xlsx" )
 ```
