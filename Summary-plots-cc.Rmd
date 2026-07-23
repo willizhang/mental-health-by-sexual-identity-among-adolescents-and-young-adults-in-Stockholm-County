@@ -108,7 +108,7 @@ p_prevalence <- ggplot(
   
   aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -238,7 +238,7 @@ p_prevalence <- ggplot(
   
   aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -293,7 +293,7 @@ p_prevalence <- ggplot(
   
   aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -348,7 +348,7 @@ p_prevalence <- ggplot(
   
   aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -455,7 +455,7 @@ p_pr_pd <- ggplot(
   
   aes( x = year, y = estimate, color = exposure_model, group = exposure_model ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -640,7 +640,7 @@ p_pr_pd_by_sex <- ggplot(
   
   aes( x = year, y = estimate, color = exposure_model, group = exposure_model ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -724,7 +724,7 @@ p_pr_pd_by_sex <- ggplot(
   
   aes( x = year, y = estimate, color = exposure_model, group = exposure_model ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -807,7 +807,7 @@ p_pr_pd_by_sex <- ggplot(
     filter( outcome %in% c( "suicide_attempts" ) ),
   aes( x = year, y = estimate, color = exposure_model, group = exposure_model ) ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.025 ) +
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -873,7 +873,7 @@ p_pr_pd_by_sex
 ggsave( "results_output/plots_cc/p_pr_pd_suicide_attempts_by_sex_cc.svg", plot = p_pr_pd_by_sex, width = 9, height = 7.5 )
 ```
 
-### 3. Register-Based Outcomes (Individual Survey Samples + Year-Specific Cross-Sectional Samples)
+### 3. Register-Based Outcomes (Survey and Cross-Sectional Samples)
 #### 3.1. Annual prevalence
 ##### 3.1.1. By sexual identity
 ###### 3.1.1.1. Prepare data
@@ -985,7 +985,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1002,11 +1002,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1089,7 +1089,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1106,11 +1106,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1268,7 +1268,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1293,11 +1293,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence of Antidepressant Use (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1318,7 +1318,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results_output/plots_cc/p_prevalence_indi_cs_med_antidepressant_cc.svg", plot = p_prevalence, width = 10, height = 5 )
+ggsave( "results_output/plots_cc/p_prevalence_indi_cs_med_antidepressant_by_sex_cc.svg", plot = p_prevalence, width = 10, height = 5 )
 ```
 
 ###### 3.1.2.3. Anxiolytic use
@@ -1337,7 +1337,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1362,11 +1362,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence of Anxiolytic Use (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1387,7 +1387,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results_output/plots_cc/p_prevalence_indi_cs_med_anxiolytic_cc.svg", plot = p_prevalence, width = 10, height = 5 )
+ggsave( "results_output/plots_cc/p_prevalence_indi_cs_med_anxiolytic_by_sex_cc.svg", plot = p_prevalence, width = 10, height = 5 )
 ```
 
 ###### 3.1.2.4. Depression
@@ -1406,7 +1406,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1431,11 +1431,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence of Depression (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1456,7 +1456,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_depression_cc.svg", plot = p_prevalence, width = 10, height = 5 )
+ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_depression_by_sex_cc.svg", plot = p_prevalence, width = 10, height = 5 )
 ```
 
 ###### 3.1.2.5. Anxiety disorders
@@ -1475,7 +1475,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1500,11 +1500,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence of Anxiety Disorders (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1525,7 +1525,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_anxiety_cc.svg", plot = p_prevalence, width = 10, height = 5 )
+ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_anxiety_by_sex_cc.svg", plot = p_prevalence, width = 10, height = 5 )
 ```
 
 ###### 3.1.2.6. Stress-related disorders
@@ -1544,7 +1544,7 @@ p_prevalence <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.03 ) +
 
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 1.2 ) +
@@ -1569,11 +1569,11 @@ p_prevalence <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ) ) +
+  "pooled" = "Cross-Sectional Samples",
+  "individual" = "Survey Samples" ) ) +
   
   labs(
-    x = "Survey/Calendar Year",
+    x = "Calendar Year",
     y = "Prevalence of Stress-Related Disorders (95% CI)",
     color = NULL,
     linetype = NULL ) +
@@ -1594,7 +1594,7 @@ p_prevalence <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_prevalence
-ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_stress_cc.svg", plot = p_prevalence, width = 10, height = 5 )
+ggsave( "results_output/plots_cc/p_prevalence_indi_cs_dia_stress_by_sex_cc.svg", plot = p_prevalence, width = 10, height = 5 )
 ```
 
 #### 3.2. Prevalence ratio and difference
@@ -1756,7 +1756,7 @@ p_pr_pd <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -1792,12 +1792,12 @@ p_pr_pd <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ),
+      "pooled" = "Cross-Sectional Samples",
+      "individual" = "Survey Samples" ),
     
     guide = guide_legend( nrow = 2 ) ) +
   
-  labs( x = "Survey/Calendar Year",
+  labs( x = "Calendar Year",
         y = "Association Estimate (95% CI)",
         color = NULL,
         linetype = NULL ) +
@@ -1876,7 +1876,7 @@ p_pr_pd <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2003, 2019 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -1912,12 +1912,12 @@ p_pr_pd <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ),
+      "pooled" = "Cross-Sectional Samples",
+      "individual" = "Survey Samples" ),
     
     guide = guide_legend( nrow = 2 ) ) +
   
-  labs( x = "Survey/Calendar Year",
+  labs( x = "Calendar Year",
         y = "Association Estimate (95% CI)",
         color = NULL,
         linetype = NULL ) +
@@ -2170,7 +2170,7 @@ p_pr_pd_by_sex <- ggplot(
   
   geom_errorbar( data = plot_data %>%
                    filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.025 ) +
+                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
   
   geom_line( linewidth = 0.8 ) + 
   geom_point( size = 1.2 ) +
@@ -2208,12 +2208,12 @@ p_pr_pd_by_sex <- ggplot(
       "individual" = "solid" ),
     
     labels = c(
-      "pooled" = "Year-Specific Cross-Sectional Analyses",
-      "individual" = "Individual Survey Analyses" ),
+      "pooled" = "Cross-Sectional Samples",
+      "individual" = "Survey Samples" ),
     
     guide = guide_legend( nrow = 2 ) ) +
   
-  labs( x = "Survey/Calendar Year",
+  labs( x = "Calendar Year",
         y = "Association Estimate of Antidepressant Use (95% CI)",
         color = NULL,
         linetype = NULL ) +
