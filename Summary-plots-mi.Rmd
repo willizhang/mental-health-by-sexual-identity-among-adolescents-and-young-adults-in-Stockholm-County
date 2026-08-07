@@ -353,7 +353,376 @@ p_pr_pd
 ggsave( "results_output/plots_mi/p_pr_pd_psychological_distress_imp.svg", plot = p_pr_pd, width = 9, height = 6 )
 ```
 
-#### 2.3. Suicidal thoughts and attempts
+### 4. Suicidal thoughts and attempts
+#### 4.1. Prevalence by sexual identity
+```{r}
+plot_data <- prevalence_imp %>% 
+  filter( 
+    outcome %in% c( "suicidal_thoughts", "suicide_attempts" )
+    ) %>%
+  mutate(
+    lower_ci = if_else( 
+      lower_ci < 0, 
+      0, 
+      lower_ci 
+      )
+    )
+
+summary( plot_data )
+
+p_prevalence <- ggplot( 
+  plot_data,
+  
+  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
+  
+  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = 0.14 ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 2 ) +
+  
+  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.05 ) ) ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" 
+      ) 
+    ) +
+  
+  labs(
+    x = "Survey Year",
+    y = "Prevalence (95% CI)",
+    color = NULL ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom"
+    ) +
+  
+  facet_wrap(
+    ~ outcome,
+    ncol = 2,
+    scales = "free",
+    labeller = labeller(
+      outcome = c(
+        "suicidal_thoughts" = "Suicidal Thoughts",
+        "suicide_attempts" = "Suicide Attempts" 
+        ) 
+      )
+    ) +
+  
+  # plot_data %>%
+  # group_by( outcome ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      outcome == "suicidal_thoughts" ~ 
+        scale_y_continuous( limits = c( 0, 0.75 ),
+                            breaks = seq( 0, 0.75, 0.15 ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0.01 ) ) ),
+      
+      outcome == "suicide_attempts" ~ 
+        scale_y_continuous( limits = c( 0, 0.4 ),
+                            breaks = seq( 0, 0.4, 0.1 ),
+                            labels = scales::percent_format( accuracy = 1 ),
+                            expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
+  
+  coord_capped_cart( left = 'both', bottom = 'both' ) 
+
+p_prevalence
+ggsave( "results_output/plots_mi/p_prevalence_suicide_imp.svg", plot = p_prevalence, width = 9.5, height = 5 )
+```
+
+#### 4.2. PR/PD by sexual identity
+```{r}
+# suicidal thoughts
+plot_data <- pr_pd_imp %>%
+  filter( 
+    outcome == "suicidal_thoughts"
+    )
+
+summary( plot_data )
+
+plot_data %>%
+  filter( 
+    estimate_type == "Prevalence Difference" 
+    ) %>%
+  summary()
+
+plot_data %>% 
+  filter( 
+    estimate_type == "Prevalence Ratio" 
+    ) %>%
+  summary()
+
+p_pr_pd_thought <- ggplot(
+  plot_data,
+  
+  aes( 
+    x = year,
+    y = point_estimate,
+    color = exposure_model,
+    group = exposure_model 
+    ) 
+  ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Ratio" 
+      ),
+    aes( 
+      yintercept = 1 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Difference" 
+      ),
+    aes( 
+      yintercept = 0 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14
+    ) +
+  
+  geom_line( 
+    linewidth = 0.8
+    ) +
+  
+  geom_point(
+    shape = 15,
+    size = 2.5
+    ) +
+  
+  scale_color_manual( 
+    values = exposure_colors,
+    labels = exposure_labels
+    ) +
+  
+  labs( 
+    x = "Survey Year",
+    y = "Association Estimate (95% CI)",
+    title = "Suicidal Thoughts",
+    color = NULL
+    ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom",
+    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 )
+    ) +
+  
+  facet_wrap(
+    ~ estimate_type,
+    ncol = 2,
+    scales = "free" 
+    ) +
+  
+  scale_x_discrete(
+    limits = c( "2021", "2014", "2010", "2006", "2002" ),
+    expand = expansion( mult = c( 0.05, 0.05 ) )
+    ) +
+  
+  # plot_data %>%
+  # group_by( estimate_type ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      estimate_type == "Prevalence Ratio" ~ 
+        scale_y_continuous( limits = c( 0.5, 3.5 ),
+                            breaks = seq( 0.5, 3.5, 0.5 ),
+                            expand = expansion( mult = c( 0.08, 0.01 ) ) ),
+      
+      estimate_type == "Prevalence Difference" ~ 
+        scale_y_continuous( limits = c( -10, 40 ),
+                            breaks = seq( -10, 40, 10 ),
+                            labels = scales::label_number( suffix = "%" ),
+                            expand = expansion( mult = c( 0.08, 0.01 ) ) ) ) ) +
+  
+  coord_flip()
+  
+p_pr_pd_thought
+
+# suicide attempts
+plot_data <- pr_pd_imp %>%
+  filter( 
+    outcome == "suicide_attempts"
+    )
+
+summary( plot_data )
+
+plot_data %>%
+  filter( 
+    estimate_type == "Prevalence Difference" 
+    ) %>%
+  summary()
+
+plot_data %>% 
+  filter( 
+    estimate_type == "Prevalence Ratio" 
+    ) %>%
+  summary()
+
+p_pr_pd_attempt <- ggplot(
+  plot_data,
+  
+  aes( 
+    x = year,
+    y = point_estimate,
+    color = exposure_model,
+    group = exposure_model 
+    ) 
+  ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Ratio" 
+      ),
+    aes( 
+      yintercept = 1 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Difference" 
+      ),
+    aes( 
+      yintercept = 0 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14
+    ) +
+  
+  geom_line( 
+    linewidth = 0.8
+    ) +
+  
+  geom_point(
+    shape = 15,
+    size = 2.5
+    ) +
+  
+  scale_color_manual( 
+    values = exposure_colors,
+    labels = exposure_labels
+    ) +
+  
+  labs( 
+    x = "Survey Year",
+    y = "Association Estimate (95% CI)",
+    title = "Suicide Attempts",
+    color = NULL
+    ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom",
+    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 )
+    ) +
+  
+  facet_wrap(
+    ~ estimate_type,
+    ncol = 2,
+    scales = "free" 
+    ) +
+  
+  scale_x_discrete(
+    limits = c( "2021", "2014", "2010", "2006", "2002" ),
+    expand = expansion( mult = c( 0.05, 0.05 ) )
+    ) +
+  
+  # plot_data %>%
+  # group_by( estimate_type ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      estimate_type == "Prevalence Ratio" ~ 
+        scale_y_continuous( limits = c( 0, 8 ),
+                            breaks = seq( 0, 8, 2 ),
+                            expand = expansion( mult = c( 0.08, 0.01 ) ) ),
+      
+      estimate_type == "Prevalence Difference" ~ 
+        scale_y_continuous( limits = c( -10, 30 ),
+                            breaks = seq( -10, 30, 10 ),
+                            labels = scales::label_number( suffix = "%" ),
+                            expand = expansion( mult = c( 0.08, 0.01 ) ) ) ) ) +
+  
+  coord_flip()
+  
+p_pr_pd_attempt
+
+# combine plot
+combined_plot <- 
+  ( p_pr_pd_thought / plot_spacer() / p_pr_pd_attempt ) +
+  plot_layout( guides = "collect",
+               heights = c( 1, 0.02, 1 ) ) &
+  theme( legend.position = "right" )
+  
+combined_plot
+ggsave( "results_output/plots_mi/p_pr_pd_suicide_imp.svg", plot = combined_plot, width = 11, height = 10 )
+```
+
 ```{r}
 prevalence_imp %>%
   filter( outcome %in% c( "psychological_distress" ) ) %>%
@@ -2053,7 +2422,7 @@ summary( pr_pd_imp %>% filter( sample_type == "individual" ) )
 ```{r}
 # antidepressant use
 plot_data <- pr_pd_imp %>% 
-  filter( outcome %in% c( "antidepressant" ) )
+  filter( outcome == "antidepressant" )
 summary( plot_data )
 
 plot_data %>%
