@@ -45,40 +45,72 @@ exposure_labels <- c(
 ### 2. Prepare Data
 #### 2.1. By sexual identity
 ```{r}
-# prevalence
+##### prevalence #####
+
+# survey samples
 prevalence_2002_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = - c( sexual_identity ),
+    cols = -sexual_identity,
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" ) %>%
-  mutate( year = as.factor( year ) )
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
 
 prevalence_2006_by_identity_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_identity_cc.xlsx" ) ) %>%
   rename( sexual_identity = sexual_identity_2010 ) %>%
   pivot_longer(
-    cols = -c( sexual_identity ),
+    cols = -sexual_identity,
     names_to = c( "outcome", "year", ".value" ),
     names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" ) %>%
-  mutate( year = as.factor( year ) )
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
 
 overall_prevalence_2010_imp <- read_xlsx( here( "results_output/results_mi/overall_prevalence_2010_imp.xlsx" ) ) %>%
-  mutate( year = as.factor( year ) )
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
 
 overall_prevalence_2014_imp <- read_xlsx( here( "results_output/results_mi/overall_prevalence_2014_imp.xlsx" ) ) %>%
-  mutate( year = as.factor( year ) )
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
 
 overall_prevalence_2021_imp <- read_xlsx( here( "results_output/results_mi/overall_prevalence_2021_imp.xlsx" ) ) %>%
-  mutate( year = as.factor( year ) )
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
 
+# cross-sectional samples
+prevalence_poo_cs_imp <- read_xlsx( here( "results_output/results_mi/prevalence_poo_cs_imp.xlsx" ) ) %>%
+  mutate( sample_type = "CS",
+          outcome = recode( 
+            outcome,
+            antidepressant_use = "antidepressant",
+            anxiolytic_use = "anxiolytic"
+            ) 
+          )
+
+str( prevalence_poo_cs_imp )
+
+# merge prevalence data
 setequal( colnames( prevalence_2002_by_identity_cc ), colnames( overall_prevalence_2010_imp ) )
+setequal( colnames( prevalence_2002_by_identity_cc ), colnames( prevalence_poo_cs_imp ) )
 
 prevalence_imp <- bind_rows( 
   prevalence_2002_by_identity_cc,
   prevalence_2006_by_identity_cc,
   overall_prevalence_2010_imp,
   overall_prevalence_2014_imp,
-  overall_prevalence_2021_imp 
+  overall_prevalence_2021_imp,
+  prevalence_poo_cs_imp
   ) %>%
   filter( 
     sexual_identity != "Other"
@@ -88,34 +120,62 @@ prevalence_imp <- bind_rows(
       sexual_identity,
       levels = c( "Heterosexual", "Homosexual", "Bisexual" ) 
       ),
-    outcome = as.factor( outcome )
+    outcome = as.factor( outcome ),
+    sample_type = as.factor( sample_type )
     )
 
 summary( prevalence_imp )
 
+
+##### prevalence ratio and difference #####
+
 # prevalence ratio
 pr_2002_cc <- read_xlsx( here( 'results_output/results_cc/pr_2002_cc.xlsx' ) ) %>%
   rename( sexual_identity = exposure_level,
-          point_estimate = estimate )
+          point_estimate = estimate ) %>%
+  mutate(
+    sample_type = "survey",
+    estimate_type = "Prevalence Ratio"
+  )
 
 pr_2006_cc <- read_xlsx( here( 'results_output/results_cc/pr_2006_cc.xlsx' ) ) %>%
   rename( sexual_identity = exposure_level,
-          point_estimate = estimate )
+          point_estimate = estimate ) %>%
+  mutate(
+    sample_type = "survey",
+    estimate_type = "Prevalence Ratio"
+  )
 
-pr_2010_imp <- read_xlsx( here( 'results_output/results_mi/pr_2010_imp.xlsx' ) )
-pr_2014_imp <- read_xlsx( here( 'results_output/results_mi/pr_2014_imp.xlsx' ) )
-pr_2021_imp <- read_xlsx( here( 'results_output/results_mi/pr_2021_imp.xlsx' ) )
+pr_2010_imp <- read_xlsx( here( 'results_output/results_mi/pr_2010_imp.xlsx' ) ) %>%
+  mutate(
+    sample_type = "survey",
+    estimate_type = "Prevalence Ratio"
+  )
+
+pr_2014_imp <- read_xlsx( here( 'results_output/results_mi/pr_2014_imp.xlsx' ) ) %>%
+  mutate(
+    sample_type = "survey",
+    estimate_type = "Prevalence Ratio"
+  )
+
+pr_2021_imp <- read_xlsx( here( 'results_output/results_mi/pr_2021_imp.xlsx' ) ) %>%
+  mutate(
+    sample_type = "survey",
+    estimate_type = "Prevalence Ratio"
+  )
+
+pr_poo_cs_imp <- read_xlsx( here( 'results_output/results_mi/pr_poo_cs_imp.xlsx' ) ) %>%
+  mutate( 
+    estimate_type = "Prevalence Ratio",
+    sample_type = "CS",
+    outcome = recode( outcome,
+                      antidepressant_use = "antidepressant",
+                      anxiolytic_use = "anxiolytic"
+                      ) 
+    )
 
 setequal( colnames( pr_2002_cc ), colnames( pr_2010_imp ) )
-
-pr_imp <- bind_rows( 
-  pr_2002_cc,
-  pr_2006_cc,
-  pr_2010_imp,
-  pr_2014_imp,
-  pr_2021_imp 
-  ) %>%
-  mutate( estimate_type = "Prevalence Ratio" )
+setequal( colnames( pr_2002_cc ), colnames( pr_poo_cs_imp ) )
 
 # prevalence difference
 pd_2002_cc <- read_xlsx( here( 'results_output/results_cc/pd_2002_cc.xlsx' ) ) %>%
@@ -125,7 +185,9 @@ pd_2002_cc <- read_xlsx( here( 'results_output/results_cc/pd_2002_cc.xlsx' ) ) %
     across(
       c( point_estimate, lower_ci, upper_ci ),
       ~ .x * 100
-      )
+      ),
+    sample_type = "survey",
+    estimate_type = "Prevalence Difference"
     )
 
 pd_2006_cc <- read_xlsx( here( 'results_output/results_cc/pd_2006_cc.xlsx' ) ) %>%
@@ -135,36 +197,115 @@ pd_2006_cc <- read_xlsx( here( 'results_output/results_cc/pd_2006_cc.xlsx' ) ) %
     across(
       c( point_estimate, lower_ci, upper_ci ),
       ~ .x * 100
-      )
+      ),
+    sample_type = "survey",
+    estimate_type = "Prevalence Difference"
     )
 
-pd_2010_imp <- read_xlsx( here( 'results_output/results_mi/pd_2010_imp.xlsx' ) )
-pd_2014_imp <- read_xlsx( here( 'results_output/results_mi/pd_2014_imp.xlsx' ) )
-pd_2021_imp <- read_xlsx( here( 'results_output/results_mi/pd_2021_imp.xlsx' ) )
+pd_2010_imp <- read_xlsx( here( 'results_output/results_mi/pd_2010_imp.xlsx' ) ) %>%
+  mutate( 
+    sample_type = "survey",
+    estimate_type = "Prevalence Difference" 
+    )
 
-pd_imp <- bind_rows(
+pd_2014_imp <- read_xlsx( here( 'results_output/results_mi/pd_2014_imp.xlsx' ) ) %>%
+  mutate( 
+    sample_type = "survey",
+    estimate_type = "Prevalence Difference" 
+    )
+
+pd_2021_imp <- read_xlsx( here( 'results_output/results_mi/pd_2021_imp.xlsx' ) ) %>%
+  mutate( 
+    sample_type = "survey",
+    estimate_type = "Prevalence Difference" 
+    )
+
+pd_poo_cs_imp <- read_xlsx( here( 'results_output/results_mi/pd_poo_cs_imp.xlsx' ) ) %>%
+  mutate( 
+    estimate_type = "Prevalence Difference",
+    sample_type = "CS",
+    outcome = recode( 
+      outcome,
+      antidepressant_use = "antidepressant",
+      anxiolytic_use = "anxiolytic"
+      ) 
+    )
+
+setequal( colnames( pd_2002_cc ), colnames( pd_2010_imp ) )
+setequal( colnames( pd_2002_cc ), colnames( pd_poo_cs_imp ) )
+
+# merge prevalence difference and ratio
+setequal( colnames( pr_2002_cc ), colnames( pd_2002_cc ) )
+
+pr_pd_imp <- bind_rows( 
+  pr_2002_cc,
+  pr_2006_cc,
+  pr_2010_imp,
+  pr_2014_imp,
+  pr_2021_imp,
+  pr_poo_cs_imp,
+  
   pd_2002_cc,
   pd_2006_cc,
   pd_2010_imp,
   pd_2014_imp,
-  pd_2021_imp
+  pd_2021_imp,
+  pd_poo_cs_imp 
   ) %>%
-  mutate( estimate_type = "Prevalence Difference" )
-
-pr_pd_imp <- bind_rows( pr_imp, pd_imp ) %>%
-  filter( sexual_identity != "Other" ) %>%
-  mutate( outcome = as.factor( outcome ),
-          year = as.factor( year ),
-          sexual_identity = as.factor( sexual_identity ),
-          model_type = recode_factor( model_type, "crude" = "Crude", "adjusted" = "Adjusted" ),
-          estimate_type = factor( estimate_type, levels = c( "Prevalence Ratio", "Prevalence Difference" ) ),
-          exposure_model = interaction( sexual_identity, model_type, sep = "_" ),
-          exposure_model = factor( exposure_model, levels = c(
-            "Bisexual_Crude",
-            "Homosexual_Crude",
-            "Bisexual_Adjusted",
-            "Homosexual_Adjusted" ) ) )
+  filter( 
+    sexual_identity != "Other" 
+    ) %>%
+  mutate( 
+    outcome = as.factor( outcome ),
+    year = as.integer( year ),
+    sample_type = as.factor( sample_type ),
+    estimate_type = factor( estimate_type, levels = c( "Prevalence Difference", "Prevalence Ratio" ) ),
+    sexual_identity = as.factor( sexual_identity ),
+    model_type = recode_factor( model_type, "crude" = "Crude", "adjusted" = "Adjusted" ),
+    exposure_model = interaction( sexual_identity, model_type, sep = "_" ),
+    exposure_model = factor( 
+      exposure_model, 
+      levels = c(
+        "Bisexual_Crude",
+        "Homosexual_Crude",
+        "Bisexual_Adjusted",
+        "Homosexual_Adjusted" 
+        ) 
+      ) 
+    )
 summary( pr_pd_imp )
+
+pr_pd_imp <- pr_pd_imp %>%
+  mutate(
+    across(
+      c( point_estimate, lower_ci, upper_ci ),
+      ~ if_else(
+        (
+          outcome == "anxiety" &
+          year == 2014 &
+          sexual_identity == "Homosexual" &
+          sample_type == "survey"
+        ) |
+        (
+          outcome == "stress_related" &
+          year == 2006 &
+          sexual_identity == "Bisexual" &
+          sample_type == "survey"
+        ),
+        NA_real_,
+        .
+      )
+    ),
+    
+    across(
+      c( lower_ci, upper_ci ),
+      ~ if_else(
+        sample_type == "CS",
+        NA_real_,
+        .
+        )
+      )
+    )
 ```
 
 ### 3. Psychological Distress
@@ -173,21 +314,47 @@ summary( pr_pd_imp )
 plot_data <- prevalence_imp %>% 
   filter( 
     outcome == "psychological_distress"
-    )
+    ) %>%
+  mutate(
+    year = as.factor( year )
+  )
 
 summary( plot_data )
 
 p_prevalence <- ggplot( 
   plot_data,
   
-  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
+  aes( 
+    x = year, 
+    y = point_estimate, 
+    color = sexual_identity, 
+    group = sexual_identity 
+    ) 
+  ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = 0.14 ) +
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14 
+    ) +
   
-  geom_line( linewidth = 0.8 ) +
-  geom_point( size = 2 ) +
+  geom_line( 
+    linewidth = 0.8 
+    ) +
   
-  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.05 ) ) ) +
+  geom_point( 
+    size = 2 
+    ) +
+  
+  scale_x_discrete( 
+    expand = expansion( 
+      mult = c( 
+        0.08, 0.05 
+        ) 
+      ) 
+    ) +
   
 # plot_data %>% 
 #   group_by( outcome ) %>%
@@ -196,10 +363,20 @@ p_prevalence <- ggplot(
 #     max_upper_ci = max( upper_ci )
 #   )
   
-  scale_y_continuous( limits = c( 0, 0.75 ),
-                      breaks = seq( 0, 0.75, 0.15 ),
-                      labels = scales::percent_format( accuracy = 1 ),
-                      expand = expansion( mult = c( 0.05, 0 ) ) ) +
+  scale_y_continuous( 
+    limits = c( 0, 0.75 ),
+    breaks = seq( 
+      0, 0.75, 0.15 
+      ),
+    labels = scales::percent_format( 
+      accuracy = 1 
+      ),
+    expand = expansion( 
+      mult = c( 
+        0.05, 0 
+        ) 
+      ) 
+    ) +
   
   scale_color_manual( 
     values = c(
@@ -210,17 +387,28 @@ p_prevalence <- ggplot(
   labs(
     x = "Survey Year",
     y = "Prevalence (95% CI)",
-    color = NULL ) +
+    color = NULL 
+    ) +
   
   theme_classic() +
   theme(
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
+    axis.title = element_text( 
+      family = "Arial", size = 11 
+      ),
+    axis.text = element_text( 
+      family = "Arial", size = 11 
+      ),
     legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
+    legend.text = element_text( 
+      family = "Arial", size = 10 
+      ),
+    legend.position = "bottom" 
+    ) +
   
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
+  coord_capped_cart( 
+    left = 'both', 
+    bottom = 'both' 
+    ) 
 
 p_prevalence
 ggsave( "results_output/plots_mi/p_prevalence_psychological_distress_imp.svg", plot = p_prevalence, width = 5, height = 5 )
@@ -229,7 +417,10 @@ ggsave( "results_output/plots_mi/p_prevalence_psychological_distress_imp.svg", p
 #### 3.2. PR/PD by sexual identity
 ```{r}
 plot_data <- pr_pd_imp %>%
-  filter( outcome == "psychological_distress" )
+  filter( outcome == "psychological_distress" ) %>%
+    mutate(
+    year = as.factor( year )
+  )
 
 summary( plot_data )
 
@@ -324,7 +515,9 @@ p_pr_pd <- ggplot(
   
   scale_x_discrete(
     limits = c( "2021", "2014", "2010", "2006", "2002" ),
-    expand = expansion( mult = c( 0.05, 0.05 ) )
+    expand = expansion( 
+      mult = c( 0.05, 0.05 ) 
+      )
     ) +
   
   # plot_data %>%
@@ -337,15 +530,25 @@ p_pr_pd <- ggplot(
   ggh4x::facetted_pos_scales( 
     y = list(
       estimate_type == "Prevalence Ratio" ~ 
-        scale_y_continuous( limits = c( 0.5, 3 ),
-                            breaks = seq( 0.5, 3, 0.5 ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ),
+        scale_y_continuous( 
+          limits = c( 0.5, 3 ),
+          breaks = seq( 0.5, 3, 0.5 ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ),
       
       estimate_type == "Prevalence Difference" ~ 
-        scale_y_continuous( limits = c( -20, 40 ),
-                            breaks = seq( -20, 40, 10 ),
-                            labels = scales::label_number( suffix = "%" ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ) ) ) +
+        scale_y_continuous( 
+          limits = c( -20, 40 ),
+          breaks = seq( -20, 40, 10 ),
+          labels = scales::label_number( suffix = "%" ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
   
   coord_flip()
   
@@ -353,7 +556,7 @@ p_pr_pd
 ggsave( "results_output/plots_mi/p_pr_pd_psychological_distress_imp.svg", plot = p_pr_pd, width = 9, height = 6 )
 ```
 
-### 4. Suicidal thoughts and attempts
+### 4. Suicidal Thoughts and Attempts
 #### 4.1. Prevalence by sexual identity
 ```{r}
 plot_data <- prevalence_imp %>% 
@@ -361,6 +564,7 @@ plot_data <- prevalence_imp %>%
     outcome %in% c( "suicidal_thoughts", "suicide_attempts" )
     ) %>%
   mutate(
+    year = as.factor( year ),
     lower_ci = if_else( 
       lower_ci < 0, 
       0, 
@@ -373,14 +577,30 @@ summary( plot_data )
 p_prevalence <- ggplot( 
   plot_data,
   
-  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
+  aes( 
+    x = year, 
+    y = point_estimate, 
+    color = sexual_identity, 
+    group = sexual_identity 
+    ) 
+  ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = 0.14 ) +
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14 
+    ) +
   
   geom_line( linewidth = 0.8 ) +
   geom_point( size = 2 ) +
   
-  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.05 ) ) ) +
+  scale_x_discrete( 
+    expand = expansion( 
+      mult = c( 0.08, 0.05 ) 
+      ) 
+    ) +
   
   scale_color_manual( 
     values = c(
@@ -429,18 +649,31 @@ p_prevalence <- ggplot(
   ggh4x::facetted_pos_scales( 
     y = list(
       outcome == "suicidal_thoughts" ~ 
-        scale_y_continuous( limits = c( 0, 0.75 ),
-                            breaks = seq( 0, 0.75, 0.15 ),
-                            labels = scales::percent_format( accuracy = 1 ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ),
+        scale_y_continuous( 
+          limits = c( 0, 0.75 ),
+          breaks = seq( 0, 0.75, 0.15 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            )
+          ),
       
       outcome == "suicide_attempts" ~ 
-        scale_y_continuous( limits = c( 0, 0.4 ),
-                            breaks = seq( 0, 0.4, 0.1 ),
-                            labels = scales::percent_format( accuracy = 1 ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
+        scale_y_continuous( 
+          limits = c( 0, 0.4 ),
+          breaks = seq( 0, 0.4, 0.1 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
   
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
+  coord_capped_cart( 
+    left = 'both', 
+    bottom = 'both' 
+    ) 
 
 p_prevalence
 ggsave( "results_output/plots_mi/p_prevalence_suicide_imp.svg", plot = p_prevalence, width = 9.5, height = 5 )
@@ -452,7 +685,10 @@ ggsave( "results_output/plots_mi/p_prevalence_suicide_imp.svg", plot = p_prevale
 plot_data <- pr_pd_imp %>%
   filter( 
     outcome == "suicidal_thoughts"
-    )
+    ) %>%
+  mutate(
+    year = as.factor( year )
+  )
 
 summary( plot_data )
 
@@ -553,7 +789,9 @@ p_pr_pd_thought <- ggplot(
   
   scale_x_discrete(
     limits = c( "2021", "2014", "2010", "2006", "2002" ),
-    expand = expansion( mult = c( 0.05, 0.05 ) )
+    expand = expansion( 
+      mult = c( 0.05, 0.05 ) 
+      )
     ) +
   
   # plot_data %>%
@@ -566,15 +804,25 @@ p_pr_pd_thought <- ggplot(
   ggh4x::facetted_pos_scales( 
     y = list(
       estimate_type == "Prevalence Ratio" ~ 
-        scale_y_continuous( limits = c( 0.5, 3.5 ),
-                            breaks = seq( 0.5, 3.5, 0.5 ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ),
+        scale_y_continuous( 
+          limits = c( 0.5, 3.5 ),
+          breaks = seq( 0.5, 3.5, 0.5 ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ),
       
       estimate_type == "Prevalence Difference" ~ 
-        scale_y_continuous( limits = c( -10, 40 ),
-                            breaks = seq( -10, 40, 10 ),
-                            labels = scales::label_number( suffix = "%" ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ) ) ) +
+        scale_y_continuous( 
+          limits = c( -10, 40 ),
+          breaks = seq( -10, 40, 10 ),
+          labels = scales::label_number( suffix = "%" ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
   
   coord_flip()
   
@@ -584,7 +832,10 @@ p_pr_pd_thought
 plot_data <- pr_pd_imp %>%
   filter( 
     outcome == "suicide_attempts"
-    )
+    ) %>%
+  mutate(
+    year = as.factor( year )
+  )
 
 summary( plot_data )
 
@@ -685,7 +936,9 @@ p_pr_pd_attempt <- ggplot(
   
   scale_x_discrete(
     limits = c( "2021", "2014", "2010", "2006", "2002" ),
-    expand = expansion( mult = c( 0.05, 0.05 ) )
+    expand = expansion( 
+      mult = c( 0.05, 0.05 ) 
+      )
     ) +
   
   # plot_data %>%
@@ -698,15 +951,25 @@ p_pr_pd_attempt <- ggplot(
   ggh4x::facetted_pos_scales( 
     y = list(
       estimate_type == "Prevalence Ratio" ~ 
-        scale_y_continuous( limits = c( 0, 8 ),
-                            breaks = seq( 0, 8, 2 ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ),
+        scale_y_continuous( 
+          limits = c( 0, 8 ),
+          breaks = seq( 0, 8, 1 ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ),
       
       estimate_type == "Prevalence Difference" ~ 
-        scale_y_continuous( limits = c( -10, 30 ),
-                            breaks = seq( -10, 30, 10 ),
-                            labels = scales::label_number( suffix = "%" ),
-                            expand = expansion( mult = c( 0.08, 0.01 ) ) ) ) ) +
+        scale_y_continuous( 
+          limits = c( -10, 30 ),
+          breaks = seq( -10, 30, 10 ),
+          labels = scales::label_number( suffix = "%" ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
   
   coord_flip()
   
@@ -723,73 +986,83 @@ combined_plot
 ggsave( "results_output/plots_mi/p_pr_pd_suicide_imp.svg", plot = combined_plot, width = 11, height = 10 )
 ```
 
+### 5. Use of Antidepressants and Anxiolytics
+#### 5.1. Prevalence by sexual identity
 ```{r}
-prevalence_imp %>%
-  filter( outcome %in% c( "psychological_distress" ) ) %>%
-  summary()
-
-prevalence_imp %>%
-  filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
-  summary()
-
-prevalence_imp %>%
-  filter( outcome %in% c( "suicide_attempts" ) ) %>%
-  summary()
-
 plot_data <- prevalence_imp %>% 
+  filter( 
+    outcome %in% c( "antidepressant", "anxiolytic" )
+    ) %>%
   mutate(
-    lower_ci = if_else( outcome == "suicide_attempts" & 
-                          lower_ci < 0, 0, lower_ci )
+    lower_ci = if_else( 
+      lower_ci < 0, 
+      0, 
+      lower_ci 
+      )
     )
+
+summary( plot_data )
 
 p_prevalence <- ggplot( 
   plot_data,
   
-  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
+  aes( 
+    x = year, 
+    y = point_estimate, 
+    color = sexual_identity,
+    linetype = sample_type,
+    group = interaction( sexual_identity, sample_type )
+    ) 
+  ) +
   
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
+  geom_errorbar(
+    data = plot_data %>%
+      filter( 
+        sample_type == "survey" 
+        ),
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.5 
+    ) +
   
   geom_line( linewidth = 0.8 ) +
-  geom_point( size = 1.2 ) +
+  geom_point( size = 2 ) +
   
-  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.05 ) ) ) +
+  scale_x_continuous(
+    breaks = seq( 2006, 2021, 3 ),
+    expand = expansion( 
+      mult = c( 0.08, 0.05 ) 
+      ) 
+    ) +
   
   scale_color_manual( 
     values = c(
       "Heterosexual" = "#F8766D",
       "Homosexual"   = "#00BFC4",
-      "Bisexual"     = "#C77CFF" ) ) +
+      "Bisexual"     = "#C77CFF" 
+      ) 
+    ) +
+  
+  scale_linetype_manual(
+    values = c(
+      "CS" = "dotted",
+      "survey" = "solid" 
+      ),
+    
+    labels = c(
+      "CS" = "Cross-Sectional Samples",
+      "survey" = "Survey Samples" 
+      ) 
+    ) +
   
   labs(
-    x = "Survey Year",
+    x = "Calendar Year",
     y = "Prevalence (95% CI)",
-    color = NULL ) +
-  
-  facet_wrap( ~ outcome, 
-              ncol = 2,
-              axes = "all",
-              scales = "free",
-              labeller = labeller(
-                outcome = c(
-                  "psychological_distress" = "Psychological Distress",
-                  "suicidal_thoughts" = "Suicidal Thoughts",
-                  "suicide_attempts" = "Suicide Attempts" ) ) ) +
-  
-  ggh4x::facetted_pos_scales( y = list(
-    outcome == "psychological_distress" ~ scale_y_continuous( limits = c( 0, 0.7 ), 
-                                                              breaks = c( seq( 0, 0.7, 0.1 ) ),
-                                                              labels = scales::percent_format( accuracy = 1 ),
-                                                              expand = expansion( mult = c( 0.05, 0.05 ) ) ),
-    
-    outcome == "suicidal_thoughts" ~ scale_y_continuous( limits = c( 0, 0.6 ), 
-                                                         breaks = c( seq( 0, 0.6, 0.1 ) ),
-                                                         labels = scales::percent_format( accuracy = 1 ),
-                                                         expand = expansion( mult = c( 0.05, 0.05 ) ) ),
-    
-    outcome == "suicide_attempts" ~ scale_y_continuous( limits = c( 0, 0.3 ), 
-                                                        breaks = c( seq( 0, 0.3, 0.1 ) ),
-                                                        labels = scales::percent_format( accuracy = 1 ),
-                                                        expand = expansion( mult = c( 0.05, 0.05 ) ) ) ) ) +
+    color = NULL,
+    linetype = NULL
+    ) +
   
   theme_classic() +
   theme(
@@ -800,12 +1073,568 @@ p_prevalence <- ggplot(
     axis.text = element_text( family = "Arial", size = 11 ),
     legend.title = element_blank(),
     legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.spacing.y = unit( -0.3, "cm" ),
+    legend.box.just = "center"
+    ) +
   
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
+  guides(
+    linetype = guide_legend(
+      order = 1,
+      nrow = 1
+      ),
+    
+    color = guide_legend(
+      order = 2,
+      nrow = 1
+      )
+    ) +
+  
+  facet_wrap(
+    ~ outcome,
+    ncol = 2,
+    scales = "free",
+    labeller = labeller(
+      outcome = c(
+        "antidepressant" = "Antidepressant Use",
+        "anxiolytic" = "Anxiolytic Use" 
+        ) 
+      )
+    ) +
+  
+  # plot_data %>%
+  # group_by( outcome ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      outcome == "antidepressant" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 0.3 ),
+          breaks = seq( 0, 0.3, 0.1 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            ) 
+          ),
+      
+      outcome == "anxiolytic" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 0.2 ),
+          breaks = seq( 0, 0.2, 0.1 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
+  
+  coord_capped_cart( 
+    left = 'both', 
+    bottom = 'both' 
+    ) 
 
 p_prevalence
-ggsave( "results_output/plots_mi/p_prevalence_self_report_imp.svg", plot = p_prevalence, width = 9, height = 8 )
+ggsave( "results_output/plots_mi/p_prevalence_medication_imp.svg", plot = p_prevalence, width = 10, height = 5 )
+```
+
+#### 5.2. PR/PD by sexual identity
+```{r}
+# antidepressant use
+plot_data <- pr_pd_imp %>%
+  filter( 
+    outcome == "antidepressant"
+    )
+
+plot_data %>%
+  filter( 
+    estimate_type == "Prevalence Difference" 
+    ) %>%
+  summary()
+
+plot_data %>% 
+  filter( 
+    estimate_type == "Prevalence Ratio" 
+    ) %>%
+  summary()
+
+plot_data <- plot_data %>%
+  mutate(
+    pd_upper_clipped = 
+      sample_type == "survey" &
+      estimate_type == "Prevalence Difference" &
+      upper_ci > 20,
+    
+    upper_ci = if_else( 
+      pd_upper_clipped, 
+      20, 
+      upper_ci 
+      ),
+    
+    pr_upper_clipped = 
+      sample_type == "survey" &
+      estimate_type == "Prevalence Ratio" & 
+      upper_ci > 6,
+    
+    upper_ci = if_else( 
+      pr_upper_clipped, 
+      6, 
+      upper_ci 
+      )
+  )
+
+
+p_pr_pd_antidepressant <- ggplot(
+  plot_data,
+  
+  aes( 
+    x = year,
+    y = point_estimate,
+    color = exposure_model,
+    linetype = sample_type,
+    group = interaction( exposure_model, sample_type )
+    ) 
+  ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Ratio" 
+      ),
+    aes( 
+      yintercept = 1 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Difference" 
+      ),
+    aes( 
+      yintercept = 0 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  # error bar 
+  geom_segment(
+    data = plot_data %>%
+      filter( sample_type == "survey" ),
+    aes(
+      x = year,
+      xend = year,
+      y = lower_ci,
+      yend = upper_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter(
+        sample_type == "survey"
+      ),
+    aes(
+      x = year - 0.25,
+      xend = year + 0.25,
+      y = lower_ci,
+      yend = lower_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter(
+        sample_type == "survey",
+        !pd_upper_clipped,
+        !pr_upper_clipped
+      ),
+    aes(
+      x = year - 0.25,
+      xend = year + 0.25,
+      y = upper_ci,
+      yend = upper_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter( pd_upper_clipped | 
+                pr_upper_clipped ),
+    aes(
+      x = year,
+      xend = year,
+      y = upper_ci - 0.3,
+      yend = upper_ci
+    ),
+    
+    arrow = arrow(
+      length = unit( 2.5, "mm" ),
+      type = "closed"
+    ),
+    linewidth = 0.4,
+    show.legend = FALSE
+  ) +
+  
+  geom_line( 
+    linewidth = 0.8
+    ) +
+  
+  geom_point(
+    shape = 15,
+    size = 2.5
+    ) +
+  
+  scale_color_manual( 
+    values = exposure_colors,
+    labels = exposure_labels
+    ) +
+  
+  scale_linetype_manual(
+    values = c(
+      "CS" = "dotted",
+      "survey" = "solid" 
+      ),
+    
+    labels = c(
+      "CS" = "Cross-Sectional Samples",
+      "survey" = "Survey Samples" 
+      ) 
+    ) +
+  
+
+  labs( 
+    x = "Calendar Year",
+    y = "Association Estimate (95% CI)",
+    title = "Antidepressant Use",
+    color = NULL,
+    linetype = NULL
+    ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 )
+    ) +
+  
+  guides(
+    linetype = guide_legend(
+      order = 1,
+      nrow = 2
+      ),
+    
+    color = guide_legend(
+      order = 2,
+      nrow = 4
+      )
+    ) +
+  
+  facet_wrap(
+    ~ estimate_type,
+    ncol = 2,
+    scales = "free" 
+    ) +
+  
+  scale_x_continuous( 
+    trans = "reverse",
+    breaks = seq( 2006, 2021, 3 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  # plot_data %>%
+  # group_by( estimate_type ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      estimate_type == "Prevalence Ratio" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 6 ),
+          breaks = seq( 0, 6, 1 ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ),
+      
+      estimate_type == "Prevalence Difference" ~ 
+        scale_y_continuous( 
+          limits = c( -10, 20 ),
+          breaks = seq( -10, 20, 10 ),
+          labels = scales::label_number( suffix = "%" ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
+  
+  coord_flip()
+  
+p_pr_pd_antidepressant
+
+# anxiolytic use
+plot_data <- pr_pd_imp %>%
+  filter( 
+    outcome == "anxiolytic"
+    )
+
+plot_data %>%
+  filter( 
+    estimate_type == "Prevalence Difference" 
+    ) %>%
+  summary()
+
+plot_data %>% 
+  filter( 
+    estimate_type == "Prevalence Ratio" 
+    ) %>%
+  summary()
+
+plot_data <- plot_data %>%
+  mutate(
+    pr_upper_clipped = 
+      sample_type == "survey" &
+      estimate_type == "Prevalence Ratio" & 
+      upper_ci > 8,
+    
+    upper_ci = if_else( 
+      pr_upper_clipped, 
+      8, 
+      upper_ci 
+      )
+  )
+
+
+p_pr_pd_anxiolytic <- ggplot(
+  plot_data,
+  
+  aes( 
+    x = year,
+    y = point_estimate,
+    color = exposure_model,
+    linetype = sample_type,
+    group = interaction( exposure_model, sample_type )
+    ) 
+  ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Ratio" 
+      ),
+    aes( 
+      yintercept = 1 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  geom_hline( 
+    data = data.frame( 
+      estimate_type = "Prevalence Difference" 
+      ),
+    aes( 
+      yintercept = 0 
+      ),
+    linetype = "dashed",
+    color = "grey80",
+    linewidth = 0.4 
+    ) +
+  
+  # error bar 
+  geom_segment(
+    data = plot_data %>%
+      filter( sample_type == "survey" ),
+    aes(
+      x = year,
+      xend = year,
+      y = lower_ci,
+      yend = upper_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter(
+        sample_type == "survey"
+      ),
+    aes(
+      x = year - 0.25,
+      xend = year + 0.25,
+      y = lower_ci,
+      yend = lower_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter(
+        sample_type == "survey",
+        !pr_upper_clipped
+      ),
+    aes(
+      x = year - 0.25,
+      xend = year + 0.25,
+      y = upper_ci,
+      yend = upper_ci
+    ),
+    linewidth = 0.4
+  ) +
+  
+  geom_segment(
+    data = plot_data %>%
+      filter( 
+        pr_upper_clipped 
+        ),
+    aes(
+      x = year,
+      xend = year,
+      y = upper_ci - 0.3,
+      yend = upper_ci
+    ),
+    
+    arrow = arrow(
+      length = unit( 2.5, "mm" ),
+      type = "closed"
+    ),
+    linewidth = 0.4,
+    show.legend = FALSE
+  ) +
+  
+  geom_line( 
+    linewidth = 0.8
+    ) +
+  
+  geom_point(
+    shape = 15,
+    size = 2.5
+    ) +
+  
+  scale_color_manual( 
+    values = exposure_colors,
+    labels = exposure_labels
+    ) +
+  
+  scale_linetype_manual(
+    values = c(
+      "CS" = "dotted",
+      "survey" = "solid" 
+      ),
+    
+    labels = c(
+      "CS" = "Cross-Sectional Samples",
+      "survey" = "Survey Samples" 
+      ) 
+    ) +
+  
+
+  labs( 
+    x = "Calendar Year",
+    y = "Association Estimate (95% CI)",
+    title = "Anxiolytic Use",
+    color = NULL,
+    linetype = NULL
+    ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 )
+    ) +
+  
+  guides(
+    linetype = guide_legend(
+      order = 1,
+      nrow = 2
+      ),
+    
+    color = guide_legend(
+      order = 2,
+      nrow = 4
+      )
+    ) +
+  
+  facet_wrap(
+    ~ estimate_type,
+    ncol = 2,
+    scales = "free" 
+    ) +
+  
+  scale_x_continuous( 
+    trans = "reverse",
+    breaks = seq( 2006, 2021, 3 ),
+    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
+  
+  # plot_data %>%
+  # group_by( estimate_type ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci ),
+  #   max_upper_ci = max( upper_ci )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      estimate_type == "Prevalence Ratio" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 8 ),
+          breaks = seq( 0, 8, 1 ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ),
+      
+      estimate_type == "Prevalence Difference" ~ 
+        scale_y_continuous( 
+          limits = c( -5, 15 ),
+          breaks = seq( -5, 15, 5 ),
+          labels = scales::label_number( suffix = "%" ),
+          expand = expansion( 
+            mult = c( 0.08, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
+  
+  coord_flip()
+  
+p_pr_pd_anxiolytic
+
+# combine plot
+combined_plot <- 
+  ( p_pr_pd_antidepressant / plot_spacer() / p_pr_pd_anxiolytic ) +
+  plot_layout( guides = "collect",
+               heights = c( 1, 0.02, 1 ) ) &
+  theme( legend.position = "right" )
+  
+combined_plot
+ggsave( "results_output/plots_mi/p_pr_pd_medication_imp.svg", plot = combined_plot, width = 11, height = 11 )
 ```
 
 ##### 2.1.2. By sex
@@ -1639,129 +2468,6 @@ ann_prevalence_imp <- bind_rows(
 summary( ann_prevalence_imp )
 ```
 
-###### 3.1.1.2. Antidepressant and anxiolytic use
-```{r}
-ann_prevalence_imp %>%
-  filter( outcome %in% c( "antidepressant" ),
-          sample_type == "individual" ) %>%
-  summary()
-
-ann_prevalence_imp %>%
-  filter( outcome %in% c( "anxiolytic" ),
-          sample_type == "individual" ) %>%
-  summary()
-
-ann_prevalence_imp %>%
-  filter( outcome %in% c( "anxiolytic" ),
-          sample_type == "individual",
-          lower_ci < 0 ) %>% 
-  View()
-
-plot_data <- ann_prevalence_imp %>% 
-  filter( outcome %in% c( "antidepressant", "anxiolytic" ) ) %>%
-  mutate(
-    outcome = factor(
-      outcome,
-      levels = c( "antidepressant", "anxiolytic" )
-    )
-  ) %>%
-  mutate(
-    lower_ci = if_else( sample_type == "individual" & lower_ci < 0, 0, lower_ci )
-    )
-
-p_prevalence <- ggplot( 
-  plot_data,
-  aes( x = year, y = point_estimate, color = sexual_identity, linetype = sample_type, group = interaction( sexual_identity, sample_type ) ) ) +
-  
-  geom_errorbar( data = plot_data %>%
-                   filter( sample_type == "individual" ),
-                 aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 2006, 2021 ) ) * 0.03 ) +
-
-  geom_line( linewidth = 0.8 ) +
-  geom_point( size = 1.2 ) +
-  
-  scale_color_manual( 
-    values = c(
-      "Heterosexual" = "#F8766D",
-      "Homosexual"   = "#00BFC4",
-      "Bisexual"     = "#C77CFF" ) ) +
-  
-  scale_linetype_manual(
-    values = c(
-      "pooled" = "dotted",
-      "individual" = "solid" ),
-    
-    labels = c(
-      "pooled" = "Cross-Sectional Samples",
-      "individual" = "Survey Samples" ) ) +
-  
-  labs(
-    x = "Calendar Year",
-    y = "Prevalence (95% CI)",
-    color = NULL,
-    linetype = NULL ) +
-  
-  facet_wrap( ~ outcome,
-              ncol = 2,
-              axes = "all",
-              scales = "free",
-              labeller = labeller(
-                outcome = c(
-                  "antidepressant" = "Antidepressant Use",
-                  "anxiolytic" = "Anxiolytic Use" ) ) ) +
-  
-  ggh4x::facetted_pos_scales( 
-    x = list(
-      outcome %in% c( "antidepressant", "anxiolytic" ) ~
-        scale_x_continuous( breaks = seq( 2006, 2021, 3 ),
-                            limits = c( 2006, 2021 ),
-                            expand = expansion( mult = c( 0.08, 0.05 ) ) ) ),
-    
-    y = list(
-      outcome == "antidepressant" ~ 
-        scale_y_continuous( limits = c( 0, 0.3 ),
-                            breaks = c( seq( 0, 0.3, 0.1 ) ),
-                            labels = scales::percent_format( accuracy = 1 ),
-                            expand = expansion( mult = c( 0.05, 0 ) ) ),
-      
-      outcome == "anxiolytic" ~ 
-        scale_y_continuous( limits = c( 0, 0.2 ),
-                            breaks = c( seq( 0, 0.2, 0.1 ) ),
-                            labels = scales::percent_format( accuracy = 1 ),
-                            expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
-  
-  guides(
-    linetype = guide_legend(
-      order = 1,
-      nrow = 1
-      ),
-    
-    color = guide_legend(
-      order = 2,
-      nrow = 1
-      )
-    ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text( family = "Arial", size = 11 ),
-    panel.spacing = unit( 2, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom",
-    legend.box = "vertical",
-    legend.spacing.y = unit( -0.3, "cm" ),
-    legend.box.just = "center" ) +
-  
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
-
-p_prevalence
-ggsave( "results_output/plots_mi/p_prevalence_indi_cs_med_imp.svg", plot = p_prevalence, width = 10, height = 5 )
-```
-
 ###### 3.1.1.3. Other register-based outcomes
 ```{r}
 ann_prevalence_imp %>%
@@ -2418,435 +3124,7 @@ summary( pr_pd_imp )
 summary( pr_pd_imp %>% filter( sample_type == "individual" ) )
 ```
 
-###### 3.2.1.2. Antidepressant and anxiolytic use
-```{r}
-# antidepressant use
-plot_data <- pr_pd_imp %>% 
-  filter( outcome == "antidepressant" )
-summary( plot_data )
 
-plot_data %>%
-  filter( sample_type == "individual",
-          estimate_type == "Prevalence Difference" ) %>%
-  summary()
-
-plot_data %>% 
-  filter( sample_type == "individual",
-          estimate_type == "Prevalence Ratio" ) %>%
-  summary()
-
-plot_data <- plot_data %>%
-  mutate(
-    clip_pd =
-      sample_type == "individual" &
-      estimate_type == "Prevalence Difference",
-
-    lower_clipped = clip_pd & lower_ci < -5,
-    upper_clipped = clip_pd & upper_ci > 20,
-
-    lower_ci = if_else( lower_clipped, -5, lower_ci ),
-    upper_ci = if_else( upper_clipped, 20, upper_ci )
-  )
-
-p_pr_pd_antidepressant <- ggplot(
-  plot_data,
-  
-  aes( x = year,
-       y = point_estimate,
-       color = exposure_model,
-       linetype = sample_type,
-       group = interaction( exposure_model, sample_type ) ) ) +
-  
-  geom_hline( data = data.frame( estimate_type = "Prevalence Ratio" ),
-              aes( yintercept = 1 ),
-              linetype = "dashed",
-              color = "grey80",
-              linewidth = 0.4 ) +
-  
-  geom_hline( data = data.frame( estimate_type = "Prevalence Difference" ),
-              aes( yintercept = 0 ),
-              linetype = "dashed",
-              color = "grey80",
-              linewidth = 0.4 ) +
-  
-  # error bar 
-  geom_segment(
-    data = plot_data %>%
-      filter( sample_type == "individual" ),
-    aes(
-      x = year,
-      xend = year,
-      y = lower_ci,
-      yend = upper_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter(
-        sample_type == "individual",
-        !lower_clipped
-        ),
-    aes(
-      x = year - 0.15,
-      xend = year + 0.15,
-      y = lower_ci,
-      yend = lower_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter(
-        sample_type == "individual",
-        !upper_clipped
-        ),
-    aes(
-      x = year - 0.15,
-      xend = year + 0.15,
-      y = upper_ci,
-      yend = upper_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter( lower_clipped ),
-    aes(
-      x = year,
-      xend = year,
-      y = lower_ci + 0.3,
-      yend = lower_ci
-      ),
-    
-    arrow = arrow(
-      length = unit( 2, "mm" ),
-      type = "closed"
-      ),
-    linewidth = 0.4,
-    show.legend = FALSE
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter( upper_clipped ),
-    aes(
-      x = year,
-      xend = year,
-      y = upper_ci - 0.3,
-      yend = upper_ci
-      ),
-    
-    arrow = arrow(
-      length = unit( 2, "mm" ),
-      type = "closed"
-      ),
-    linewidth = 0.4,
-    show.legend = FALSE
-    ) +
-  
-  geom_line( linewidth = 0.6 ) +
-  
-  geom_point(
-    shape = 15,
-    size = 2
-    ) +
-  
-  scale_color_manual( 
-    values = exposure_colors,
-    labels = exposure_labels
-    ) +
-  
-  scale_linetype_manual(
-    values = c(
-      "pooled" = "dotted",
-      "individual" = "solid" 
-      ),
-    
-    labels = c(
-      "pooled" = "Cross-Sectional Samples",
-      "individual" = "Survey Samples" )
-    ) +
-  
-  labs( 
-    x = "Calendar Year",
-    y = "Association Estimate (95% CI)",
-    title = "Antidepressant Use",
-    color = NULL,
-    linetype = NULL 
-    ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text( family = "Arial", size = 11 ),
-    panel.spacing = unit( 2, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "right",
-    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 )
-    ) +
-  
-  facet_wrap(
-    ~ estimate_type,
-    ncol = 2,
-    scales = "free" 
-    ) + 
-  
-  scale_x_continuous( 
-    trans = "reverse",
-    breaks = seq( 2006, 2021, 3 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
-  
-  ggh4x::facetted_pos_scales( 
-    y = list(
-      estimate_type == "Prevalence Ratio" ~ 
-        scale_y_continuous( limits = c( 0, 7 ),
-                            breaks = c( seq( 0, 7, 1 ) ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ),
-      
-      estimate_type == "Prevalence Difference" ~ 
-        scale_y_continuous( limits = c( -5, 20 ),
-                            breaks = c( seq( -5, 20, 5 ) ),
-                            labels = scales::label_number( suffix = "%" ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
-  
-  coord_flip() +
-  
-  guides(
-    color = guide_legend(
-      order = 1,
-      nrow = 4,
-      byrow = TRUE,
-      override.aes = list(
-        size = 2,
-        linetype = 0
-      )
-    ),
-    
-    linetype = guide_legend(
-      order = 2,
-      nrow = 2,
-      keywidth = unit( 0.8, "cm" )
-    )
-  )
-  
-p_pr_pd_antidepressant
-# ggsave( "results_output/plots_mi/p_pr_pd_antidepressant_imp.svg", plot = p_pr_pd_antidepressant, width = 9, height = 6 )
-
-
-# anxiolytic use
-plot_data <- pr_pd_imp %>% 
-  filter( outcome %in% c( "anxiolytic" ) )
-summary( plot_data )
-
-plot_data %>%
-  filter( sample_type == "individual",
-          estimate_type == "Prevalence Difference" ) %>%
-  summary()
-
-plot_data %>% 
-  filter( sample_type == "individual",
-          estimate_type == "Prevalence Ratio" ) %>%
-  summary()
-
-plot_data <- plot_data %>%
-  mutate(
-    upper_clipped =
-      sample_type == "individual" &
-      estimate_type == "Prevalence Ratio" &
-      upper_ci > 8,
-
-    upper_ci = if_else( upper_clipped, 8, upper_ci )
-  )
-
-p_pr_pd_anxiolytic <- ggplot(
-  plot_data,
-  
-  aes( x = year,
-       y = point_estimate,
-       color = exposure_model,
-       linetype = sample_type,
-       group = interaction( exposure_model, sample_type ) ) ) +
-  
-  geom_hline( data = data.frame( estimate_type = "Prevalence Ratio" ),
-              aes( yintercept = 1 ),
-              linetype = "dashed",
-              color = "grey80",
-              linewidth = 0.4 ) +
-  
-  geom_hline( data = data.frame( estimate_type = "Prevalence Difference" ),
-              aes( yintercept = 0 ),
-              linetype = "dashed",
-              color = "grey80",
-              linewidth = 0.4 ) +
-  
-  # error bar 
-  geom_segment(
-    data = plot_data %>%
-      filter( sample_type == "individual" ),
-    aes(
-      x = year,
-      xend = year,
-      y = lower_ci,
-      yend = upper_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter(
-        sample_type == "individual"
-        ),
-    aes(
-      x = year - 0.15,
-      xend = year + 0.15,
-      y = lower_ci,
-      yend = lower_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter(
-        sample_type == "individual",
-        !upper_clipped
-        ),
-    aes(
-      x = year - 0.15,
-      xend = year + 0.15,
-      y = upper_ci,
-      yend = upper_ci
-      ),
-    linewidth = 0.4
-    ) +
-  
-  geom_segment(
-    data = plot_data %>%
-      filter( upper_clipped ),
-    aes(
-      x = year,
-      xend = year,
-      y = upper_ci - 0.3,
-      yend = upper_ci
-      ),
-    
-    arrow = arrow(
-      length = unit( 2, "mm" ),
-      type = "closed"
-      ),
-    linewidth = 0.4,
-    show.legend = FALSE
-    ) +
-  
-  geom_line( linewidth = 0.6 ) +
-  
-  geom_point(
-    shape = 15,
-    size = 2
-    ) +
-  
-  scale_color_manual( 
-    values = exposure_colors,
-    labels = exposure_labels
-    ) +
-  
-  scale_linetype_manual(
-    values = c(
-      "pooled" = "dotted",
-      "individual" = "solid" 
-      ),
-    
-    labels = c(
-      "pooled" = "Cross-Sectional Samples",
-      "individual" = "Survey Samples" )
-    ) +
-  
-  labs( 
-    x = "Calendar Year",
-    y = "Association Estimate (95% CI)",
-    title = "Anxiolytic Use",
-    color = NULL,
-    linetype = NULL 
-    ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text( family = "Arial", size = 11 ),
-    panel.spacing = unit( 2, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "right" ,
-    plot.title = element_text( family = "Arial", size = 12, hjust = 0.5 )
-    ) +
-  
-  facet_wrap(
-    ~ estimate_type,
-    ncol = 2,
-    scales = "free" 
-    ) + 
-  
-  scale_x_continuous( 
-    trans = "reverse",
-    breaks = seq( 2006, 2021, 3 ),
-    expand = expansion( mult = c( 0.05, 0.05 ) ) ) +
-  
-  ggh4x::facetted_pos_scales( 
-    y = list(
-      estimate_type == "Prevalence Ratio" ~ 
-        scale_y_continuous( limits = c( 0, 8 ),
-                            breaks = c( seq( 0, 8, 1 ) ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ),
-      
-      estimate_type == "Prevalence Difference" ~ 
-        scale_y_continuous( limits = c( -5, 15 ),
-                            breaks = c( seq( -5, 15, 5 ) ),
-                            labels = scales::label_number( suffix = "%" ),
-                            expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
-  
-  coord_flip() +
-  
-  guides(
-    color = guide_legend(
-      order = 1,
-      nrow = 4,
-      byrow = TRUE,
-      override.aes = list(
-        size = 2,
-        linetype = 0
-      )
-    ),
-    
-    linetype = guide_legend(
-      order = 2,
-      nrow = 2,
-      keywidth = unit( 0.8, "cm" )
-    )
-  )
-  
-p_pr_pd_anxiolytic
-#ggsave( "results_output/plots_mi/p_pr_pd_anxiolytic_imp.svg", plot = p_pr_pd_anxiolytic, width = 9, height = 6 )
-
-# combine plot
-combined_plot <- 
-  ( p_pr_pd_antidepressant / plot_spacer() / p_pr_pd_anxiolytic ) +
-  plot_layout( guides = "collect",
-               heights = c( 1, 0.02, 1 ) ) &
-  theme( legend.position = "right" )
-  
-combined_plot
-ggsave( "results_output/plots_mi/p_pr_pd_antidepressant_anxiolytic_imp.svg", plot = combined_plot, width = 11, height = 10 )
-```
 
 ###### 3.2.1.3. Other register-based outcomes
 ```{r}
