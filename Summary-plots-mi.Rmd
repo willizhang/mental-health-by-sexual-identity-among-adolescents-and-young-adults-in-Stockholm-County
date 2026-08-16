@@ -308,6 +308,90 @@ pr_pd_imp <- pr_pd_imp %>%
     )
 ```
 
+#### 2.2. By sex
+```{r}
+##### prevalence #####
+
+# survey samples
+prevalence_2002_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2002_by_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" ) %>%
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
+
+prevalence_2006_by_sex_cc <- read_xlsx( here( "results_output/results_cc/prevalence_2006_by_sex_cc.xlsx" ) ) %>%
+  rename( sexual_identity = sexual_identity_2010 ) %>%
+  pivot_longer(
+    cols = -c( sexual_identity, sex ),
+    names_to = c( "outcome", "year", ".value" ),
+    names_pattern = "(.+?)_(\\d{4})_(point_estimate|lower_ci|upper_ci)" ) %>%
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
+
+prevalence_2010_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2010_by_sex_imp.xlsx" ) ) %>%
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
+
+prevalence_2014_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2014_by_sex_imp.xlsx" ) ) %>%
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
+
+prevalence_2021_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2021_by_sex_imp.xlsx" ) ) %>%
+  mutate( 
+    year = as.integer( year ),
+    sample_type = "survey"
+    )
+
+# cross-sectional samples
+prevalence_poo_cs_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_poo_cs_by_sex_imp.xlsx" ) ) %>%
+  mutate( sample_type = "CS",
+          outcome = recode( 
+            outcome,
+            antidepressant_use = "antidepressant",
+            anxiolytic_use = "anxiolytic"
+            ) 
+          )
+
+str( prevalence_poo_cs_by_sex_imp )
+
+# merge prevalence data
+setequal( colnames( prevalence_2002_by_sex_cc ), colnames( prevalence_2010_by_sex_imp ) )
+setequal( colnames( prevalence_2002_by_sex_cc ), colnames( prevalence_poo_cs_by_sex_imp ) )
+
+prevalence_by_sex_imp <- bind_rows( 
+  prevalence_2002_by_sex_cc,
+  prevalence_2006_by_sex_cc,
+  prevalence_2010_by_sex_imp,
+  prevalence_2014_by_sex_imp,
+  prevalence_2021_by_sex_imp,
+  prevalence_poo_cs_by_sex_imp
+  ) %>%
+  filter( 
+    sexual_identity != "Other"
+    ) %>%
+  mutate( 
+    sexual_identity = factor( 
+      sexual_identity,
+      levels = c( "Heterosexual", "Homosexual", "Bisexual" ) 
+      ),
+    outcome = as.factor( outcome ),
+    sample_type = as.factor( sample_type )
+    )
+
+summary( prevalence_by_sex_imp )
+```
+
 ### 3. Psychological Distress
 #### 3.1. Prevalence by sexual identity
 ```{r}
@@ -414,7 +498,106 @@ p_prevalence
 ggsave( "results_output/plots_mi/p_prevalence_psychological_distress_imp.svg", plot = p_prevalence, width = 5, height = 5 )
 ```
 
-#### 3.2. PR/PD by sexual identity
+#### 3.2. Prevalence by sex
+```{r}
+plot_data <- prevalence_by_sex_imp %>% 
+  filter( 
+    outcome == "psychological_distress"
+    ) %>%
+  mutate(
+    year = as.factor( year ),
+    sex = factor(
+      sex,
+      levels = c( "Female", "Male" )
+    )
+  )
+
+summary( plot_data )
+
+p_prevalence <- ggplot( 
+  plot_data,
+  
+  aes( 
+    x = year, 
+    y = point_estimate, 
+    color = sexual_identity, 
+    group = sexual_identity 
+    ) 
+  ) +
+  
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14 
+    ) +
+  
+  geom_line( 
+    linewidth = 0.8 
+    ) +
+  
+  geom_point( 
+    size = 2 
+    ) +
+  
+  scale_x_discrete( 
+    expand = expansion( 
+      mult = c( 0.08, 0.05 ) 
+      ) 
+    ) +
+  
+  scale_y_continuous( 
+    limits = c( 0, 1 ),
+    breaks = seq( 0, 1, 0.2 ),
+    labels = scales::percent_format( accuracy = 1 ),
+    expand = expansion( 
+      mult = c( 0.05, 0 ) 
+      ) 
+    ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" 
+      ) 
+    ) +
+  
+  labs(
+    x = "Survey Year",
+    y = "Prevalence of Psychological Distress (95% CI)",
+    color = NULL 
+    ) +
+  
+  facet_wrap(
+    ~ sex,
+    ncol = 2,
+    scales = "free_x" 
+    ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom"
+    ) +
+  
+  coord_capped_cart( 
+    left = 'both', 
+    bottom = 'both' 
+    ) 
+
+p_prevalence
+ggsave( "results_output/plots_mi/p_prevalence_psychological_distress_by_sex_imp.svg", plot = p_prevalence, width = 9, height = 6 )
+```
+
+#### 3.3. PR/PD by sexual identity
 ```{r}
 plot_data <- pr_pd_imp %>%
   filter( outcome == "psychological_distress" ) %>%
@@ -679,7 +862,133 @@ p_prevalence
 ggsave( "results_output/plots_mi/p_prevalence_suicide_imp.svg", plot = p_prevalence, width = 9.5, height = 5 )
 ```
 
-#### 4.2. PR/PD by sexual identity
+#### 4.2. Prevalence by sex
+```{r}
+plot_data <- prevalence_by_sex_imp %>% 
+  filter( 
+    outcome %in% c( "suicidal_thoughts", "suicide_attempts" )
+    ) %>%
+  mutate(
+    year = as.factor( year ),
+    sex = factor(
+      sex,
+      levels = c( "Female", "Male" )
+    ),
+    lower_ci = if_else( 
+      lower_ci < 0, 
+      0, 
+      lower_ci 
+      )
+    )
+
+summary( plot_data )
+
+p_prevalence <- ggplot( 
+  plot_data,
+  
+  aes( 
+    x = year, 
+    y = point_estimate, 
+    color = sexual_identity, 
+    group = sexual_identity 
+    ) 
+  ) +
+  
+  geom_errorbar( 
+    aes( 
+      ymin = lower_ci, 
+      ymax = upper_ci 
+      ), 
+    width = 0.14 
+    ) +
+  
+  geom_line( linewidth = 0.8 ) +
+  geom_point( size = 2 ) +
+  
+  scale_x_discrete( 
+    expand = expansion( 
+      mult = c( 0.08, 0.05 ) 
+      ) 
+    ) +
+  
+  scale_color_manual( 
+    values = c(
+      "Heterosexual" = "#F8766D",
+      "Homosexual"   = "#00BFC4",
+      "Bisexual"     = "#C77CFF" 
+      ) 
+    ) +
+  
+  labs(
+    x = "Survey Year",
+    y = "Prevalence (95% CI)",
+    color = NULL ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text( family = "Arial", size = 11 ),
+    panel.spacing = unit( 2, "lines" ),
+    axis.title = element_text( family = "Arial", size = 11 ),
+    axis.text = element_text( family = "Arial", size = 11 ),
+    legend.title = element_blank(),
+    legend.text = element_text( family = "Arial", size = 10 ),
+    legend.position = "bottom"
+    ) +
+  
+  facet_grid(
+    outcome ~ sex,
+    scales = "free",
+    switch = "y",
+    labeller = labeller(
+      outcome = c(
+        "suicidal_thoughts" = "Suicidal Thoughts",
+        "suicide_attempts" = "Suicide Attempts"
+        )
+      )
+    ) +
+  
+  # plot_data %>%
+  # group_by( outcome ) %>%
+  # summarise(
+  #   min_lower_ci = min( lower_ci, na.rm = TRUE ),
+  #   max_upper_ci = max( upper_ci, na.rm = TRUE )
+  # )
+  
+  ggh4x::facetted_pos_scales( 
+    y = list(
+      outcome == "suicidal_thoughts" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 1 ),
+          breaks = seq( 0, 1, 0.2 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            )
+          ),
+      
+      outcome == "suicide_attempts" ~ 
+        scale_y_continuous( 
+          limits = c( 0, 0.5 ),
+          breaks = seq( 0, 0.5, 0.1 ),
+          labels = scales::percent_format( accuracy = 1 ),
+          expand = expansion( 
+            mult = c( 0.05, 0.01 ) 
+            ) 
+          ) 
+      ) 
+    ) +
+  
+  coord_capped_cart( 
+    left = 'both', 
+    bottom = 'both' 
+    ) 
+
+p_prevalence
+ggsave( "results_output/plots_mi/p_prevalence_suicide_by_sex_imp.svg", plot = p_prevalence, width = 9, height = 7 )
+```
+
+#### 4.3. PR/PD by sexual identity
 ```{r}
 # suicidal thoughts
 plot_data <- pr_pd_imp %>%
@@ -1637,147 +1946,15 @@ combined_plot
 ggsave( "results_output/plots_mi/p_pr_pd_medication_imp.svg", plot = combined_plot, width = 11, height = 11 )
 ```
 
+
+
+
+
+
+
+
+
 ##### 2.1.2. By sex
-###### 2.1.2.1. Prepare data
-```{r}
-# by sexual identity and sex
-prevalence_2002_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2002_by_sex_imp.xlsx" ) )
-prevalence_2006_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2006_by_sex_imp.xlsx" ) )
-prevalence_2010_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2010_by_sex_imp.xlsx" ) )
-prevalence_2014_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2014_by_sex_imp.xlsx" ) )
-prevalence_2021_by_sex_imp <- read_xlsx( here( "results_output/results_mi/prevalence_2021_by_sex_imp.xlsx" ) )
-
-# merge and clean data
-prevalence_indi_by_sex_imp <- bind_rows(
-  prevalence_2002_by_sex_imp,
-  prevalence_2006_by_sex_imp,
-  prevalence_2010_by_sex_imp,
-  prevalence_2014_by_sex_imp,
-  prevalence_2021_by_sex_imp 
-  ) %>%
-  filter( 
-    sexual_identity != "Other",
-    outcome %in% c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) 
-    ) %>%
-  mutate( 
-    sexual_identity = factor( sexual_identity, levels = c( "Heterosexual", "Homosexual", "Bisexual" ) ),
-    sex = factor( sex, levels = c( "Female", "Male" ) ),
-    outcome = factor( outcome, levels = c( "psychological_distress", "suicidal_thoughts", "suicide_attempts" ) ),
-    year = as.character( year ) )
-
-summary( prevalence_indi_by_sex_imp )
-```
-
-###### 2.1.2.2. Psychological distress
-```{r}
-prevalence_indi_by_sex_imp %>%
-  filter( outcome %in% c( "psychological_distress" ) ) %>%
-  summary()
-
-p_prevalence <- ggplot( 
-  prevalence_indi_by_sex_imp %>%
-    filter( outcome %in% c( "psychological_distress" ) ),
-  
-  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
-  
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
-  
-  geom_line( linewidth = 0.8 ) +
-  geom_point( size = 1.2 ) +
-  
-  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.02 ) ) ) +
-  
-  scale_y_continuous( limits = c( 0, 0.8 ),
-                      breaks = c( seq( 0, 0.8, 0.2 ) ),
-                      labels = scales::percent_format( accuracy = 1 ),
-                      expand = expansion( mult = c( 0.05, 0 ) ) ) +
-  
-  scale_color_manual( values = c(
-    "Heterosexual" = "#F8766D",
-    "Bisexual" = "#C77CFF",
-    "Homosexual" = "#00BFC4" ),
-    
-    guide = guide_legend( nrow = 1 ) ) +
-  
-  labs(
-    x = "Survey Year",
-    y = "Prevalence of Psychological Distress (95% CI)",
-    color = NULL ) +
-  
-  facet_grid( ~ sex ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text( family = "Arial", size = 11 ),
-    panel.spacing = unit( 2, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
-  
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
-
-p_prevalence
-ggsave( "results_output/plots_mi/p_prevalence_psychological_distress_by_sex_imp.svg", plot = p_prevalence, width = 9, height = 6 )
-```
-
-###### 2.1.2.3. Suicidal thoughts
-```{r}
-prevalence_indi_by_sex_imp %>%
-  filter( outcome %in% c( "suicidal_thoughts" ) ) %>%
-  summary()
-
-p_prevalence <- ggplot( 
-  prevalence_indi_by_sex_imp %>%
-    filter( outcome %in% c( "suicidal_thoughts" ) ),
-  
-  aes( x = year, y = point_estimate, color = sexual_identity, group = sexual_identity ) ) +
-  
-  geom_errorbar( aes( ymin = lower_ci, ymax = upper_ci ), width = diff( range( 1, 5 ) ) * 0.03 ) +
-  
-  geom_line( linewidth = 0.8 ) +
-  geom_point( size = 1.2 ) +
-  
-  scale_x_discrete( expand = expansion( mult = c( 0.08, 0.02 ) ) ) +
-  
-  scale_y_continuous( limits = c( 0, 0.8 ),
-                      breaks = c( seq( 0, 0.8, 0.2 ) ),
-                      labels = scales::percent_format( accuracy = 1 ),
-                      expand = expansion( mult = c( 0.05, 0 ) ) ) +
-  
-  scale_color_manual( values = c(
-    "Heterosexual" = "#F8766D",
-    "Bisexual" = "#C77CFF",
-    "Homosexual" = "#00BFC4" ),
-    
-    guide = guide_legend( nrow = 1 ) ) +
-  
-  labs(
-    x = "Survey Year",
-    y = "Prevalence of Suicidal Thoughts (95% CI)",
-    color = NULL ) +
-  
-  facet_grid( ~ sex ) +
-  
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text( family = "Arial", size = 11 ),
-    panel.spacing = unit( 2, "lines" ),
-    axis.title = element_text( family = "Arial", size = 11 ),
-    axis.text = element_text( family = "Arial", size = 11 ),
-    legend.title = element_blank(),
-    legend.text = element_text( family = "Arial", size = 10 ),
-    legend.position = "bottom" ) +
-  
-  coord_capped_cart( left = 'both', bottom = 'both' ) 
-
-p_prevalence
-ggsave( "results_output/plots_mi/p_prevalence_suicidal_thoughts_by_sex_imp.svg", plot = p_prevalence, width = 9, height = 6 )
-```
-
 ###### 2.1.2.4. Suicide attempts
 ```{r}
 prevalence_indi_by_sex_imp %>%
@@ -1840,10 +2017,6 @@ ggsave( "results_output/plots_mi/p_prevalence_suicide_attempts_by_sex_imp.svg", 
 
 #### 2.2. Prevalence ratio and difference
 ##### 2.2.1. By sexual identity
-###### 2.2.1.1. Prepare data
-```{r}
-
-```
 
 ###### 2.2.1.2. Suicidal thoughts
 ```{r}
