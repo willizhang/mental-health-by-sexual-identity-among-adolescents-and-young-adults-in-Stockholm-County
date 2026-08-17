@@ -1738,6 +1738,7 @@ for ( yr in 2001:2021 ) {
   study_sample <- d_all_selected_death %>%
     filter( birth_year >= yr - 29,
             birth_year <= yr - 16,
+            !is.na( sexual_identity_baseline ),
             is.na( death_date ) | death_date > followup_start ) %>%
     mutate( age = yr - birth_year )
     
@@ -1752,13 +1753,14 @@ pooled_sample_cs <- bind_rows( yearly_sample, .id = "sample_year" ) %>%
                                     labels = c( "No", "Yes" ) ) )
 
 summary( pooled_sample_cs )
-n_distinct( pooled_sample_cs$lopnr ) # total sample size = 38,675
+n_distinct( pooled_sample_cs$lopnr ) # total sample size = 32,996
 print( pooled_sample_cs %>% count( sample_year ),
        n = Inf )
 
-pooled_sample_cs %>%
+death_id_cs <- pooled_sample_cs %>%
   filter( death_same_year == "Yes" ) %>%
-  pull( lopnr ) # five died during sample year
+  pull( lopnr )
+death_id_cs # four died during sample year
 
 pooled_sample_cs %>%
   filter( death_same_year == "Yes" ) %>%
@@ -1768,6 +1770,10 @@ pooled_sample_cs %>%
 #   filter( !is.na( death_date ) ) %>%
 #   View()
 
+# dates_all %>%
+#   filter( lopnr %in% death_id_cs ) %>%
+#   View()
+
 pooled_sample_cs <- pooled_sample_cs %>%
   select( - death_date ) %>%
   rename( death = death_same_year ) %>%
@@ -1775,7 +1781,7 @@ pooled_sample_cs <- pooled_sample_cs %>%
           death = factor( death, levels = c( "Yes", "No" ) ) )
 
 summary( pooled_sample_cs )
-n_distinct( pooled_sample_cs$lopnr ) # 38,675
+n_distinct( pooled_sample_cs$lopnr ) # 32,996
 
 # sample characteristics
 table_cs <- pooled_sample_cs %>%
@@ -1813,12 +1819,11 @@ write_xlsx( table_cs, "results_output/plots_general/table_cs.xlsx" )
 #### 4.2. Plot samples
 ```{r}
 plot_sample_cs <- pooled_sample_cs %>%
-  mutate( sexual_identity_baseline = fct_na_value_to_level( sexual_identity_baseline, level = "Missing" ) ) %>%
   group_by( sample_year, sexual_identity_baseline ) %>%
   summarise( n = n(), .groups = "drop" ) %>%
   mutate( identity_group = case_when( 
             sexual_identity_baseline %in% c( "Heterosexual" ) ~ "Heterosexual",
-            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other", "Missing" ) ~ "Sexual Minority or Missing" ) ) %>%
+            sexual_identity_baseline %in% c( "Homosexual", "Bisexual", "Other" ) ~ "Sexual Minority" ) ) %>%
   arrange( identity_group, n )
 
 # plot sample size by year
@@ -1841,8 +1846,7 @@ p_pooled_sample_cs <- ggplot(
     "Heterosexual" = "#F8766D",
     "Homosexual"   = "#00BFC4",
     "Bisexual"     = "#C77CFF",
-    "Other"        = "#7CAE00",
-    "Missing"      = "#7f7f7f" ) ) +
+    "Other"        = "#7CAE00" ) ) +
   
   labs( x = "Cross-Sectional Sample Year",
         y = "Number of Participants",
@@ -1863,7 +1867,7 @@ p_pooled_sample_cs <- ggplot(
   
   ggh4x::facetted_pos_scales( y = list(
     identity_group == "Heterosexual" ~ scale_y_continuous( limits = c( 4000, 22000 ), breaks = c( seq( 4000, 22000, 2000 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ),
-    identity_group == "Sexual Minority or Missing" ~ scale_y_continuous( limits = c( 0, 4500 ), breaks = c( seq( 0, 4500, 500 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
+    identity_group == "Sexual Minority" ~ scale_y_continuous( limits = c( 0, 800 ), breaks = c( seq( 0, 800, 200 ) ), labels = scales::label_comma(), expand = expansion( mult = c( 0.05, 0.01 ) ) ) ) ) +
   
   coord_capped_cart( left = "both", bottom = "both" )
 
@@ -2147,7 +2151,7 @@ missing_pattern( pooled_sample_cs_final %>% filter( sample_year == 2021 ) )
 
 # plot missing variables
 missing_summary_cs <- pooled_sample_cs_final %>%
-  select( sample_year, sexual_identity_baseline, used_N05B, used_N06A, depression, anxiety, stress_related ) %>%
+  select( sample_year, used_N05B, used_N06A, depression, anxiety, stress_related ) %>%
   group_by( sample_year ) %>%
   summarise( across( everything(),
                      ~ mean( is.na( .x ) ),
@@ -2156,7 +2160,7 @@ missing_summary_cs <- pooled_sample_cs_final %>%
                 names_to = "variable",
                 values_to = "percent_missing" ) %>%
   mutate( variable = factor( variable, 
-                             levels = c( "sexual_identity_baseline", "depression", "anxiety", "stress_related", "used_N06A", "used_N05B" ) ) )
+                             levels = c( "depression", "anxiety", "stress_related", "used_N06A", "used_N05B" ) ) )
 
 p_missing_cs <- ggplot( 
   missing_summary_cs %>%
@@ -2171,7 +2175,7 @@ p_missing_cs <- ggplot(
     y = "Percentage of Missingness" ) +
   
   facet_wrap( ~ variable,
-              ncol = 3,
+              ncol = 2,
               axes = "all",
               scales = "free",
               labeller = labeller( variable = c(
@@ -2179,28 +2183,21 @@ p_missing_cs <- ggplot(
                 anxiety = "Anxiety Disorders",
                 stress_related = "Stress-Related Disorders",
                 used_N05B = "Anxiolytic Use",
-                used_N06A = "Antidepressant Use",
-                sexual_identity_baseline = "Sexual Identity" ) ) ) +
+                used_N06A = "Antidepressant Use" ) ) ) +
   
   ggh4x::facetted_pos_scales( 
     x = list(
-      variable %in% c( "sexual_identity_baseline", "depression", "anxiety", "stress_related" ) ~
+      variable %in% c( "depression", "anxiety", "stress_related" ) ~
         scale_x_continuous( breaks = seq( 2001, 2021, 4 ),
                             limits = c( 2001, 2021 ),
-                            expand = expansion( mult = c( 0.08, 0.02 ) ) ),
+                            expand = expansion( mult = c( 0.08, 0.05 ) ) ),
       
       variable %in% c( "used_N05B", "used_N06A" ) ~
         scale_x_continuous( breaks = seq( 2005, 2021, 4 ),
                             limits = c( 2005, 2021 ),
-                            expand = expansion( mult = c( 0.08, 0.02 ) ) ) ),
+                            expand = expansion( mult = c( 0.08, 0.05 ) ) ) ),
     
     y = list(
-      variable == "sexual_identity_baseline" ~ 
-        scale_y_continuous( limits = c( 0, 0.2 ),
-                            breaks = c( seq( 0, 0.2, 0.05 ) ),
-                            labels = scales::percent_format( accuracy = 1 ),
-                            expand = expansion( mult = c( 0.05, 0 ) ) ),
-      
       variable == "depression" ~ 
         scale_y_continuous( limits = c( 0, 0.15 ),
                             breaks = c( seq( 0, 0.15, 0.05 ) ),
@@ -2220,14 +2217,14 @@ p_missing_cs <- ggplot(
                             expand = expansion( mult = c( 0.05, 0 ) ) ),
     
       variable == "used_N06A" ~ 
-        scale_y_continuous( limits = c( 0, 0.1 ),
-                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
                             labels = scales::percent_format( accuracy = 1 ),
                             expand = expansion( mult = c( 0.05, 0 ) ) ),
     
       variable == "used_N05B" ~ 
-        scale_y_continuous( limits = c( 0, 0.1 ),
-                            breaks = c( seq( 0, 0.1, 0.05 ) ),
+        scale_y_continuous( limits = c( 0, 0.15 ),
+                            breaks = c( seq( 0, 0.15, 0.05 ) ),
                             labels = scales::percent_format( accuracy = 1 ),
                             expand = expansion( mult = c( 0.05, 0 ) ) ) ) ) +
   
@@ -2245,7 +2242,7 @@ p_missing_cs <- ggplot(
   coord_capped_cart( left = 'both', bottom = 'both' ) 
 
 p_missing_cs
-ggsave( "results_output/plots_general/p_missing_cs.svg", plot = p_missing_cs, width = 14, height = 9 )
+ggsave( "results_output/plots_general/p_missing_cs.svg", plot = p_missing_cs, width = 8, height = 10 )
 ```
 
 #### 4.5. Complete-case analysis
@@ -2810,17 +2807,6 @@ imp_med_2006_all$visitSequence
 # visualize the distributions of imputed data 
 com <- complete( imp_med_2006_all, action = "long", include = TRUE )
 
-ggplot( data = com[ !is.na( com$sexual_identity_baseline ), ], # sexual identity  
-       aes( fill = sexual_identity_baseline, x = .imp ) 
-       ) + 
-  geom_bar( position = "fill" ) + 
-  scale_y_continuous( labels = scales::percent ) + 
-  facet_wrap( ~ sex ) +
-  xlab( "Imputation number" ) + 
-  ylab( "Percentage" ) + 
-  scale_fill_discrete( name = "Sexual Identity" ) + 
-  theme( legend.justification = "bottom" )
-
 ggplot( data = com[ !is.na( com$depression ), ], # depression  
        aes( fill = depression, x = .imp ) 
        ) + 
@@ -3058,17 +3044,6 @@ imp_diag_2003_all$visitSequence
 
 # visualize the distributions of imputed data 
 com <- complete( imp_diag_2003_all, action = "long", include = TRUE )
-
-ggplot( data = com[ !is.na( com$sexual_identity_baseline ), ], # sexual identity  
-       aes( fill = sexual_identity_baseline, x = .imp ) 
-       ) + 
-  geom_bar( position = "fill" ) + 
-  scale_y_continuous( labels = scales::percent ) + 
-  facet_wrap( ~ sex ) +
-  xlab( "Imputation number" ) + 
-  ylab( "Percentage" ) + 
-  scale_fill_discrete( name = "Sexual Identity" ) + 
-  theme( legend.justification = "bottom" )
 
 ggplot( data = com[ !is.na( com$anxiety ), ], # anxiety  
        aes( fill = anxiety, x = .imp ) 
