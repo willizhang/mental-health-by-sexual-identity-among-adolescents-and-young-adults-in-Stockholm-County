@@ -1,0 +1,68 @@
+---
+title: "m-DAG"
+author: Willi Zhang, Maya Mathur
+email: willi.zhang@ki.se
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+### 1. Load Packages
+```{r}
+library(ggdag)
+library(ggplot2)
+```
+
+### 2. SPHC 2002
+#### 2.1. m-DAG
+```{r}
+theme_set( theme_dag() + theme( strip.text = element_blank() ) )
+
+coords <- tibble::tribble(
+  ~ name,                          ~ x,      ~ y,
+  "country_of_birth",              0,        -0.50,
+  "sexual_identity_t1",            0.25,     0,
+  "income",                        0.50,     -0.50,
+  "self_report_outcome",           1.00,     -0.50,
+  "loss_to_follow_up",             1.25,     0,
+  "sexual_identity_t2",            1.50,     -0.50
+  )
+
+set.seed( 123 )
+missing_dag <- dagify(
+  
+  self_report_outcome ~ sexual_identity_t1 + income,
+  income ~ sexual_identity_t1 + country_of_birth,
+  loss_to_follow_up ~ self_report_outcome + income + country_of_birth + sexual_identity_t1,
+  sexual_identity_t2 ~ sexual_identity_t1,
+
+  exposure = "sexual_identity_t2",
+  outcome = "loss_to_follow_up",
+  latent = "sexual_identity_t1",
+  
+  labels = c(
+    "sexual_identity_t1" = "Sexual identity\nin 2002",
+    "self_report_outcome" = "Self-reported\nmental health",
+    "income" = "Income",
+    "loss_to_follow_up" = "Loss to\nfollow-up",
+    "country_of_birth" = "Country of birth",
+    "sexual_identity_t2" = "Sexual identity\nin 2010"
+    ),
+  
+  coords = coords
+  
+  )
+
+missing_dag <- ggdag( missing_dag, 
+             text = FALSE, 
+             use_labels = "label"
+             )
+missing_dag
+ggsave( "missing_dag_2002.svg", plot = missing_dag, width = 9.5, height = 4 )
+
+# ggdag_adjustment_set( missing_dag,
+#                       text = FALSE, 
+#                       use_labels = "label",
+#                       shadow = TRUE
+#                       )
+```

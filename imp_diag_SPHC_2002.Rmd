@@ -1,0 +1,12 @@
+---
+title: "Imputation Diagnostics in SPHC 2002"
+output: html_notebook
+---
+
+```{r}
+summary( imp_2002 )
+```
+
+```{r}
+plot( imp_2002, trace = "all", print = "beta" )
+```

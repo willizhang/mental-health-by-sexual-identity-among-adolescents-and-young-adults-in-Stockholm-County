@@ -1,0 +1,20 @@
+---
+title: "Imputation Diagnostics in SPHC 2021"
+output: html_notebook
+---
+
+```{r}
+summary( imp_2021_by_sex [[ "Female" ]] )
+```
+
+```{r}
+plot( imp_2021_by_sex [[ "Female" ]], trace = "all", print = "beta" )
+```
+
+```{r}
+summary( imp_2021_by_sex [[ "Male" ]] )
+```
+
+```{r}
+plot( imp_2021_by_sex [[ "Male" ]], trace = "all", print = "beta" )
+```
